@@ -1,0 +1,25 @@
+server:
+  port: 8086
+  servlet:
+    context-path: /nat
+spring:
+  profiles:
+    include: nat-client
+nat:
+  idlePingEnabled: false
+  clientId: ABC-EDF
+  clientSecret: 123456
+  version: 1.1.0
+  mmVersion: C20201212
+
+  serverAddr: 127.0.0.1
+  port: 4443
+  tunnels:
+    - name: hik-001-001
+      host: 127.0.0.1
+      port: 8075
+      remotePort: 18075
+    - name: hik-001-002
+      host: 127.0.0.1
+      port: 8074
+      remotePort: 18074
