@@ -17,10 +17,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class NatClientListener {
@@ -38,7 +35,7 @@ public class NatClientListener {
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
                             //    p.addLast(sslCtx.newHandler(ch.alloc()));
-                            p.addLast(new IdleStateHandler(5, 5, 10));
+                            //p.addLast(new IdleStateHandler(5, 5, 10));
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ClientControlHandler());
@@ -49,61 +46,15 @@ public class NatClientListener {
         }
     }
 
-
-    public ChannelFuture connect() throws Exception {
-        log.debug("Start connect...");
-        NatClientConfigProperties config = ClientContext.getConfig();
-        ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-        f.addListener((ChannelFuture future) -> {
-            if (future.isSuccess()) {
-
-                //TODO 服务端配置合并
-
-//                List<Tunnel> tunnels = config.getTunnels();
-//                for (Tunnel tunnel : tunnels) {
-//                    if (tunnel.getRemotePort() > 0) {
-//                        NatMessage message = NatMessage.build();
-//                        byte[] content = JsonUtil.serialize(tunnel).getBytes();
-//                        message.setProtocol(ProtocolType.CONTROL.getCode());
-//                        message.setType(ControlMessageType.REGISTER_TUNNEL.getCode());
-//                        message.setBody(content);
-//                        log.debug("Write message: {}", message);
-//                        future.channel().writeAndFlush(message);
-//                    }
-//                }
-            } else {
-                future.channel().eventLoop().schedule(() -> {
-                    try {
-                        connect();
-                    } catch (Exception e) {
-                        log.debug("Connect error", e);
-                        log.info("Connect failure, schedule try to  reconnect after {} seconds", config.getReconnectSeconds());
-                    }
-                }, config.getReconnectSeconds(), TimeUnit.SECONDS);
-            }
-        });
-        return f;
-    }
-
-    public void reconnect() {
-        run();
-    }
-
     public void run() {
         Runnable runnable = () -> {
-            NatClientConfigProperties config = null;
             try {
-                config = ClientContext.getConfig();
-                connect().channel().closeFuture().sync();
+                NatClientConfigProperties config = ClientContext.getConfig();
+                log.debug("Start connect...");
+                ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
+                f.channel().closeFuture().sync();
             } catch (Exception e) {
-                log.debug("Connect error", e);
-                log.info("Connect failure, try to reconnect after {} seconds", config.getReconnectSeconds());
-                try {
-                    TimeUnit.SECONDS.sleep(config.getReconnectSeconds());
-                } catch (InterruptedException e1) {
-                    log.error("Thread sleep InterruptedException", e);
-                }
-                run();
+                log.error("ERROR", e);
             }
         };
         new Thread(runnable).start();

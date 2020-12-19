@@ -17,9 +17,9 @@ nat:
   tunnels:
     - name: hik-001-001
       host: 127.0.0.1
-      port: 8075
+      port: 3306
       remotePort: 18075
     - name: hik-001-002
       host: 127.0.0.1
-      port: 8074
+      port: 6379
       remotePort: 18074

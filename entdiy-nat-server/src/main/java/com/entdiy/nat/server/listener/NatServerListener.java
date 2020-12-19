@@ -23,34 +23,37 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NatServerListener extends NatCommonListener {
 
-    private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    private static final ServerBootstrap b = new ServerBootstrap();
-
-    public NatServerListener() {
-        b.group(bossGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-                .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel ch) throws Exception {
-                ChannelPipeline p = ch.pipeline();
-                p.addLast(new IdleStateHandler(10, 10, 20));
-                p.addLast(new NatMessageDecoder());
-                p.addLast(new NatMessageEncoder());
-                p.addLast(new ServerControlHandler());
-            }
-        });
-    }
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+    private EventLoopGroup workGroup = new NioEventLoopGroup();
+    private ServerBootstrap b = new ServerBootstrap();
 
     public void run() {
+
         new Thread(() -> {
             try {
+                b.group(bossGroup, workGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
+                        .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast(new IdleStateHandler(60, 80, 120));
+                        p.addLast(new NatMessageDecoder());
+                        p.addLast(new NatMessageEncoder());
+                        p.addLast(new ServerControlHandler());
+                    }
+                });
+
                 NatServerConfigProperties config = ServerContext.getConfig();
                 ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
-                log.info("Listening for control and proxy connections on [::]: {}", config.getTunnelAddr());
+                if (f.isSuccess()) {
+                    log.info("Listening for control and proxy connections on [::]: {}", config.getTunnelAddr());
+                }
                 f.channel().closeFuture().sync();
             } catch (Exception e) {
                 log.error("ServerBootstrap bind error", e);
             } finally {
                 bossGroup.shutdownGracefully();
+                workGroup.shutdownGracefully();
             }
         }).start();
 

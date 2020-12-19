@@ -2,6 +2,7 @@ package com.entdiy.nat.common.model;
 
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
+import com.entdiy.nat.common.constant.ProxyMessageType;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -73,6 +74,8 @@ public class NatMessage {
     public String getTypeString() {
         if (this.protocol == ProtocolType.CONTROL.getCode()) {
             return Arrays.stream(ControlMessageType.values()).filter(one -> one.getCode() == this.type).findFirst().get().toString();
+        }else if (this.protocol == ProtocolType.PROXY.getCode()) {
+            return Arrays.stream(ProxyMessageType.values()).filter(one -> one.getCode() == this.type).findFirst().get().toString();
         }
         return "N/A";
     }

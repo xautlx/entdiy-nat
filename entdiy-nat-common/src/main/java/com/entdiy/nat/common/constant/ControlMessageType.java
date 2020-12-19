@@ -23,7 +23,6 @@ public enum ControlMessageType {
     NewTunnel(Byte.valueOf("4")),
     ReqProxy(Byte.valueOf("5")),
     RegProxy(Byte.valueOf("6")),
-    StartProxy(Byte.valueOf("7")),
     Ping(Byte.valueOf("8")),
     Pong(Byte.valueOf("9")),
     NOT_ACCEPTABLE(Byte.valueOf("90"));

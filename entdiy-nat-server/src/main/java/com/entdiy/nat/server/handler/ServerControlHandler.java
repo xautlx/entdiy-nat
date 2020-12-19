@@ -1,5 +1,6 @@
 package com.entdiy.nat.server.handler;
 
+import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.handler.NatCommonHandler;
@@ -8,7 +9,6 @@ import com.entdiy.nat.common.model.AuthRespMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.NewTunnelMessage;
 import com.entdiy.nat.common.model.RegProxyMessage;
-import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.ServerContext;
@@ -30,19 +30,24 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 public class ServerControlHandler extends NatCommonHandler {
 
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
-    private static final ServerBootstrap b = new ServerBootstrap();
+
 
     private static Map<String, Channel> clientProxyChannelMapping = new HashMap<>();
     private static Map<String, String> reqIdUrlMapping = new HashMap<>();
 
+    private static Set<Integer> listeningRemotePorts = new HashSet<>();
+
     @Override
+
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg == null) {
             return;
@@ -86,12 +91,12 @@ public class ServerControlHandler extends NatCommonHandler {
                             ctx.writeAndFlush(respMessage);
 
                             //As a performance optimization, ask for a proxy connection up front
-                            NatMessage reqProxyMessage = NatMessage.build();
-                            reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
-                            reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
-                            reqProxyMessage.setBody(JsonUtil.serialize(new ReqProxyMessage()).getBytes());
-                            log.debug("Writing message : {}", reqProxyMessage);
-                            ctx.writeAndFlush(reqProxyMessage);
+//                            NatMessage reqProxyMessage = NatMessage.build();
+//                            reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
+//                            reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
+//                            reqProxyMessage.setBody(JsonUtil.serialize(new ReqProxyMessage()).getBytes());
+//                            log.debug("Writing message : {}", reqProxyMessage);
+//                            ctx.writeAndFlush(reqProxyMessage);
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
@@ -115,18 +120,26 @@ public class ServerControlHandler extends NatCommonHandler {
                             log.debug("Writing message : {}", respMessage);
                             ctx.writeAndFlush(respMessage);
 
-                            if (bodyMessage.getRemotePort() > 0) {
-                                b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-                                        .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
-                                    @Override
-                                    public void initChannel(SocketChannel ch) {
-                                        ChannelPipeline p = ch.pipeline();
-                                        p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), bodyMessage.getReqId(), ctx.channel()));
-                                    }
-                                });
+                            if (bodyMessage.getRemotePort() != null
+                                    && bodyMessage.getRemotePort() > -1
+                                    && !listeningRemotePorts.contains(bodyMessage.getRemotePort())) {
+                                ServerBootstrap b = new ServerBootstrap();
+                                b.group(bossGroup, workerGroup)
+                                        .channel(NioServerSocketChannel.class)
+                                        .option(ChannelOption.SO_BACKLOG, 100)
+                                        .handler(new LoggingHandler(LogLevel.INFO))
+                                        .childHandler(new ChannelInitializer<SocketChannel>() {
+                                            @Override
+                                            public void initChannel(SocketChannel ch) {
+                                                ChannelPipeline p = ch.pipeline();
+                                                p.addLast(new NatMessageEncoder());
+                                                p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
+                                            }
+                                        });
 
                                 ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
                                 log.info("Listening remote port: {}", bodyMessage.getRemotePort());
+                                listeningRemotePorts.add(bodyMessage.getRemotePort());
                                 f.channel().closeFuture().sync();
                             }
                             //TODO HTTP处理
@@ -135,14 +148,21 @@ public class ServerControlHandler extends NatCommonHandler {
                             RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
                             log.info("RegProxy client: {}", bodyMessage.getClientToken());
                             clientProxyChannelMapping.put(bodyMessage.getClientToken(), ctx.channel());
+                        } else if (messageIn.getType() == ControlMessageType.RegProxy.getCode()) {
+                            String body = messageIn.getBodyString();
+                            RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
+                            log.info("RegProxy client: {}", bodyMessage.getClientToken());
+                            clientProxyChannelMapping.put(bodyMessage.getClientToken(), ctx.channel());
                         }
                     }
+                }else if (messageIn.getProtocol() == ProtocolType.PROXY.getCode()) {
+
                 }
             } finally {
                 ReferenceCountUtil.release(msg);
             }
         } else {
-            throw new UnsupportedOperationException("Invalid message type");
+            log.info("Proxy data ...");
         }
     }
 
