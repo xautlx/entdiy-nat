@@ -8,7 +8,7 @@ public enum ControlMessageType {
     /**
      * @see AuthMessage
      */
-    Auth(Byte.valueOf("1")),
+    Auth(Byte.valueOf("5")),
 
     /**
      * type AuthResp struct {
@@ -18,13 +18,14 @@ public enum ControlMessageType {
      * Error     string
      * }
      */
-    AuthResp(Byte.valueOf("2")),
-    ReqTunnel(Byte.valueOf("3")),
-    NewTunnel(Byte.valueOf("4")),
-    ReqProxy(Byte.valueOf("5")),
-    RegProxy(Byte.valueOf("6")),
-    Ping(Byte.valueOf("8")),
-    Pong(Byte.valueOf("9")),
+    AuthResp(Byte.valueOf("10")),
+    ReqTunnel(Byte.valueOf("15")),
+    NewTunnel(Byte.valueOf("20")),
+    InitProxy(Byte.valueOf("25")),
+    ReqProxy(Byte.valueOf("30")),
+    RegProxy(Byte.valueOf("35")),
+    Ping(Byte.valueOf("40")),
+    Pong(Byte.valueOf("45")),
     NOT_ACCEPTABLE(Byte.valueOf("90"));
 
     private byte code;

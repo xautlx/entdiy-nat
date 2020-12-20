@@ -6,6 +6,7 @@ import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.handler.NatCommonHandler;
 import com.entdiy.nat.common.model.AuthMessage;
 import com.entdiy.nat.common.model.AuthRespMessage;
+import com.entdiy.nat.common.model.InitProxyMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.NewTunnelMessage;
 import com.entdiy.nat.common.model.RegProxyMessage;
@@ -13,8 +14,9 @@ import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.ServerContext;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
+import com.entdiy.nat.server.support.NatClient;
+import com.entdiy.nat.server.support.ProxyChannelSource;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -40,11 +42,13 @@ public class ServerControlHandler extends NatCommonHandler {
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-
-    private static Map<String, Channel> clientProxyChannelMapping = new HashMap<>();
     private static Map<String, String> reqIdUrlMapping = new HashMap<>();
 
     private static Set<Integer> listeningRemotePorts = new HashSet<>();
+
+    public ServerControlHandler() {
+
+    }
 
     @Override
 
@@ -64,7 +68,7 @@ public class ServerControlHandler extends NatCommonHandler {
                     respMessage.setProtocol(messageIn.getProtocol());
                     respMessage.setType(ControlMessageType.Pong.getCode());
                     respMessage.setBody(respBodyContent);
-                    ctx.writeAndFlush(respMessage);
+                    ctx.channel().writeAndFlush(respMessage);
 
                 } else {
                     log.debug("Reading message : {}", messageIn);
@@ -88,15 +92,7 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setProtocol(ProtocolType.CONTROL.getCode());
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
-                            ctx.writeAndFlush(respMessage);
-
-                            //As a performance optimization, ask for a proxy connection up front
-//                            NatMessage reqProxyMessage = NatMessage.build();
-//                            reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
-//                            reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
-//                            reqProxyMessage.setBody(JsonUtil.serialize(new ReqProxyMessage()).getBytes());
-//                            log.debug("Writing message : {}", reqProxyMessage);
-//                            ctx.writeAndFlush(reqProxyMessage);
+                            ctx.channel().writeAndFlush(respMessage);
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
@@ -118,7 +114,7 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setProtocol(ProtocolType.CONTROL.getCode());
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
-                            ctx.writeAndFlush(respMessage);
+                            ctx.channel().writeAndFlush(respMessage);
 
                             if (bodyMessage.getRemotePort() != null
                                     && bodyMessage.getRemotePort() > -1
@@ -143,30 +139,27 @@ public class ServerControlHandler extends NatCommonHandler {
                                 f.channel().closeFuture().sync();
                             }
                             //TODO HTTP处理
+                        } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
+                            String body = messageIn.getBodyString();
+                            InitProxyMessage bodyMessage = JsonUtil.deserialize(body, InitProxyMessage.class);
+                            log.info("InitProxy for client: {}", bodyMessage);
+                            NatClient natClient = new NatClient();
+                            natClient.setClientToken(bodyMessage.getClientToken());
+                            natClient.setPoolCoreSize(bodyMessage.getCoreSize());
+                            natClient.setPoolIdleSize(bodyMessage.getIdleSize());
+                            natClient.setPoolMaxSize(bodyMessage.getMaxSize());
+                            ProxyChannelSource.init(ctx.channel(), natClient);
                         } else if (messageIn.getType() == ControlMessageType.RegProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
                             log.info("RegProxy client: {}", bodyMessage.getClientToken());
-                            clientProxyChannelMapping.put(bodyMessage.getClientToken(), ctx.channel());
-                        } else if (messageIn.getType() == ControlMessageType.RegProxy.getCode()) {
-                            String body = messageIn.getBodyString();
-                            RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
-                            log.info("RegProxy client: {}", bodyMessage.getClientToken());
-                            clientProxyChannelMapping.put(bodyMessage.getClientToken(), ctx.channel());
+                            ProxyChannelSource.append(bodyMessage.getClientToken(), ctx.channel());
                         }
                     }
-                }else if (messageIn.getProtocol() == ProtocolType.PROXY.getCode()) {
-
                 }
             } finally {
                 ReferenceCountUtil.release(msg);
             }
-        } else {
-            log.info("Proxy data ...");
         }
-    }
-
-    public static Channel getProxyChannelByClientToken(String clientToken) {
-        return clientProxyChannelMapping.get(clientToken);
     }
 }

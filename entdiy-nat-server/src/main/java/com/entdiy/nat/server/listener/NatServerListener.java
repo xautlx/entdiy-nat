@@ -6,6 +6,7 @@ import com.entdiy.nat.common.listener.NatCommonListener;
 import com.entdiy.nat.server.ServerContext;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
 import com.entdiy.nat.server.handler.ServerControlHandler;
+import com.entdiy.nat.server.handler.ServerProxyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -40,6 +41,7 @@ public class NatServerListener extends NatCommonListener {
                         p.addLast(new NatMessageDecoder());
                         p.addLast(new NatMessageEncoder());
                         p.addLast(new ServerControlHandler());
+                        p.addLast(new ServerProxyHandler());
                     }
                 });
 

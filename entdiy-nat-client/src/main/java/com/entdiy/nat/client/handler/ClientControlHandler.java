@@ -9,6 +9,7 @@ import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.handler.NatCommonHandler;
 import com.entdiy.nat.common.model.AuthMessage;
 import com.entdiy.nat.common.model.AuthRespMessage;
+import com.entdiy.nat.common.model.InitProxyMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
@@ -56,7 +57,7 @@ public class ClientControlHandler extends NatCommonHandler {
         message.setType(ControlMessageType.Auth.getCode());
         message.setBody(bodyContent);
         log.debug("Write message: {}", message);
-        ctx.writeAndFlush(message);
+        ctx.channel().writeAndFlush(message);
     }
 
     @Override
@@ -119,7 +120,6 @@ public class ClientControlHandler extends NatCommonHandler {
 
                             List<Tunnel> tunnels = config.getTunnels();
                             for (Tunnel tunnel : tunnels) {
-
                                 try {
                                     Bootstrap b = new Bootstrap();
                                     b.group(group)
@@ -144,6 +144,19 @@ public class ClientControlHandler extends NatCommonHandler {
                                 }
                             }
 
+                            InitProxyMessage initProxyMessage = new InitProxyMessage();
+                            initProxyMessage.setClientToken(clientToken);
+                            initProxyMessage.setCoreSize(config.getPoolCoreSize() != null && config.getPoolCoreSize() > 0 ? config.getPoolCoreSize() : tunnels.size());
+                            initProxyMessage.setIdleSize(config.getPoolIdleSize() != null && config.getPoolIdleSize() > 0 ? config.getPoolIdleSize() : tunnels.size());
+                            initProxyMessage.setMaxSize(config.getPoolMaxSize() != null && config.getPoolMaxSize() > 0 ? config.getPoolMaxSize() : 1000);
+                            NatMessage message = NatMessage.build();
+                            byte[] content = JsonUtil.serialize(initProxyMessage).getBytes();
+                            message.setProtocol(ProtocolType.CONTROL.getCode());
+                            message.setType(ControlMessageType.InitProxy.getCode());
+                            message.setBody(content);
+                            log.trace("Write message: {}", message);
+                            ctx.channel().writeAndFlush(message);
+                        } else if (messageIn.getType() == ControlMessageType.ReqProxy.getCode()) {
                             try {
                                 Bootstrap b = new Bootstrap();
                                 b.group(group)
@@ -160,12 +173,10 @@ public class ClientControlHandler extends NatCommonHandler {
                                         });
                                 ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
                                 log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqProxy.name());
-                                f.channel().closeFuture().sync();
+                                //f.channel().closeFuture().sync();
                             } catch (InterruptedException e) {
                                 log.error("Proxy connect error", e);
                             }
-                        } else if (messageIn.getType() == ControlMessageType.ReqProxy.getCode()) {
-
                         }
                     }
                 }

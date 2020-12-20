@@ -6,7 +6,6 @@ import com.entdiy.nat.client.handler.ClientControlHandler;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -47,16 +46,12 @@ public class NatClientListener {
     }
 
     public void run() {
-        Runnable runnable = () -> {
-            try {
-                NatClientConfigProperties config = ClientContext.getConfig();
-                log.debug("Start connect...");
-                ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                f.channel().closeFuture().sync();
-            } catch (Exception e) {
-                log.error("ERROR", e);
-            }
-        };
-        new Thread(runnable).start();
+        try {
+            NatClientConfigProperties config = ClientContext.getConfig();
+            log.debug("Start connect...");
+            b.connect(config.getServerAddr(), config.getPort()).sync();
+        } catch (Exception e) {
+            log.error("ERROR", e);
+        }
     }
 }

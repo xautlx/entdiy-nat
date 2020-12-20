@@ -23,3 +23,7 @@ nat:
       host: 127.0.0.1
       port: 6379
       remotePort: 18074
+    - name: tester
+      host: 127.0.0.1
+      port: 8888
+      remotePort: 18073

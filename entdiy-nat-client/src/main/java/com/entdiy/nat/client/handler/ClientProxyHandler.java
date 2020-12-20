@@ -28,18 +28,14 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.SSLException;
-
 @Slf4j
 public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
 
-    private Tunnel tunnel;
     private String clientToken;
-    private boolean init = false;
-    private ChannelFuture f;
     private static NioEventLoopGroup group = new NioEventLoopGroup();
 
-    private BiMap<String, Channel> clientAddrChannelMapping = HashBiMap.create();
+    private BiMap<Channel, Channel> targetProxyChannelMapping = HashBiMap.create();
+    private BiMap<String, Channel> urlChannelMapping = HashBiMap.create();
 
     public ClientProxyHandler(String clientToken) {
         this.clientToken = clientToken;
@@ -76,26 +72,27 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                         StartProxyMessage reqBody = JsonUtil.deserialize(reqBodyString, StartProxyMessage.class);
 
                         NatClientConfigProperties config = ClientContext.getConfig();
-                        Channel targetChannel = clientAddrChannelMapping.get(reqBody.getClientAddr());
+                        Channel proxyChannel = ctx.channel();
+                        Channel targetChannel = targetProxyChannelMapping.get(proxyChannel);
                         if (targetChannel == null) {
-                            try {
-                                Bootstrap b = new Bootstrap();
-                                b.group(group)
-                                        .channel(NioSocketChannel.class)
-                                        .option(ChannelOption.TCP_NODELAY, true)
-                                        .handler(new ChannelInitializer<SocketChannel>() {
-                                            @Override
-                                            protected void initChannel(SocketChannel ch) throws SSLException {
-                                                ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new ClientProxyHandler(clientToken));
-                                            }
-                                        });
-                                ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                                log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqProxy.name());
-                                f.channel().closeFuture().sync();
-                            } catch (InterruptedException e) {
-                                log.error("Proxy connect error", e);
-                            }
+//                            try {
+//                                Bootstrap b = new Bootstrap();
+//                                b.group(group)
+//                                        .channel(NioSocketChannel.class)
+//                                        .option(ChannelOption.TCP_NODELAY, true)
+//                                        .handler(new ChannelInitializer<SocketChannel>() {
+//                                            @Override
+//                                            protected void initChannel(SocketChannel ch) throws SSLException {
+//                                                ChannelPipeline p = ch.pipeline();
+//                                                p.addLast(new ClientProxyHandler(clientToken));
+//                                            }
+//                                        });
+//                                ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
+//                                log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqProxy.name());
+//                                f.channel().closeFuture().sync();
+//                            } catch (InterruptedException e) {
+//                                log.error("Proxy connect error", e);
+//                            }
 
                             try {
                                 Bootstrap b = new Bootstrap();
@@ -106,24 +103,24 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                             @Override
                                             protected void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new FetchDataHandler(reqBody.getClientAddr(), ctx.channel()));
+                                                p.addLast(new FetchDataHandler(proxyChannel));
                                             }
                                         });
                                 Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
                                 ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
-                                Channel channel = f.channel();
-                                clientAddrChannelMapping.put(reqBody.getClientAddr(), channel);
-                                log.info("Connect to local service: {} ", channel.remoteAddress());
-                                channel.closeFuture().addListener((ChannelFutureListener) t -> {
-                                    Channel c = t.channel();
-                                    log.info("Disconnect to local service: {}", c.localAddress());
-                                    clientAddrChannelMapping.remove(clientAddrChannelMapping.inverse().get(c));
+                                targetChannel = f.channel();
+                                targetProxyChannelMapping.put(proxyChannel, targetChannel);
+                                log.info("Connect to local service: {} ", targetChannel.remoteAddress());
+                                targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
+                                    Channel closeTargetChannel = t.channel();
+                                    log.info("Disconnect to local service: {}", closeTargetChannel.localAddress());
+                                    Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
+                                    targetProxyChannelMapping.remove(closeProxyChannel);
+                                    //closeProxyChannel.close();
                                 });
                             } catch (InterruptedException e) {
                                 log.error("Proxy connect error", e);
                             }
-
-
                         }
                     }
                 }
@@ -132,8 +129,9 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
             }
         } else {
             ByteBuf byteBuf = (ByteBuf) msg;
-            log.info("Proxy write message to local port: {}, data length: {}", f.channel().localAddress(), byteBuf.readableBytes());
-            f.channel().writeAndFlush(byteBuf.copy());
+            Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
+            log.info("Proxy write message to local port: {}, data length: {}", targetChannel.localAddress(), byteBuf.readableBytes());
+            targetChannel.writeAndFlush(byteBuf.copy());
         }
     }
 }

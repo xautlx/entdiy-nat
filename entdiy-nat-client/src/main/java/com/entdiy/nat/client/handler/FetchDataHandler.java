@@ -9,17 +9,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class FetchDataHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-    private String clientAddr;
-    private Channel channel;
+    private Channel proxyChannel;
 
-    FetchDataHandler(String clientAddr, Channel channel) {
-        this.clientAddr = clientAddr;
-        this.channel = channel;
+    FetchDataHandler(Channel proxyChannel) {
+        this.proxyChannel = proxyChannel;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
-        log.info("FetchData write message to remote address {}, {} bytes", channel.remoteAddress(), byteBuf.readableBytes());
-        channel.writeAndFlush(byteBuf.copy());
+        log.info("FetchData write message to remote address {}, {} bytes", proxyChannel.remoteAddress(), byteBuf.readableBytes());
+        proxyChannel.writeAndFlush(byteBuf.copy());
     }
 }

@@ -11,4 +11,7 @@ public class Tunnel {
     private Integer port;
     private String schema;
     private Integer remotePort;
+
+    //运行属性，无需配置
+    private String clientToken;
 }

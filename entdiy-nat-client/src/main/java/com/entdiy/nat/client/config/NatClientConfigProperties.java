@@ -19,6 +19,10 @@ public class NatClientConfigProperties {
     private String serverAddr;
     private int port = -1;
     private String domain;
-    private List<Tunnel> tunnels;
 
+    private Integer poolCoreSize;
+    private Integer poolIdleSize;
+    private Integer poolMaxSize;
+
+    private List<Tunnel> tunnels;
 }
