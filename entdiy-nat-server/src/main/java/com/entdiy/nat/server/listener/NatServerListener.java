@@ -28,34 +28,29 @@ public class NatServerListener extends NatCommonListener {
     private ServerBootstrap b = new ServerBootstrap();
 
     public void run() {
-
-        new Thread(() -> {
-            try {
-                b.group(bossGroup, workGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-                        .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        ChannelPipeline p = ch.pipeline();
-                        p.addLast(new IdleStateHandler(60, 80, 120));
-                        p.addLast(new NatMessageDecoder());
-                        p.addLast(new NatMessageEncoder());
-                        p.addLast(new ServerControlHandler());
-                    }
-                });
-
-                NatServerConfigProperties config = ServerContext.getConfig();
-                ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
-                if (f.isSuccess()) {
-                    log.info("Listening for control and proxy connections on [::]: {}", config.getTunnelAddr());
+        try {
+            b.group(bossGroup, workGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ChannelPipeline p = ch.pipeline();
+                    p.addLast(new IdleStateHandler(60, 80, 120));
+                    p.addLast(new NatMessageDecoder());
+                    p.addLast(new NatMessageEncoder());
+                    p.addLast(new ServerControlHandler());
                 }
-                f.channel().closeFuture().sync();
-            } catch (Exception e) {
-                log.error("ServerBootstrap bind error", e);
-            } finally {
-                bossGroup.shutdownGracefully();
-                workGroup.shutdownGracefully();
-            }
-        }).start();
+            });
 
+            NatServerConfigProperties config = ServerContext.getConfig();
+            ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
+            if (f.isSuccess()) {
+                log.info("Listening for control and proxy connections: {}", f.channel());
+            }
+        } catch (Exception e) {
+            log.error("ServerBootstrap bind error", e);
+        } finally {
+            //bossGroup.shutdownGracefully();
+            //workGroup.shutdownGracefully();
+        }
     }
 }

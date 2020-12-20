@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 public class RemotePortHandler extends NatCommonHandler {
 
 
-
     private String clientToken;
     private String url;
 
@@ -34,11 +33,12 @@ public class RemotePortHandler extends NatCommonHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         String clientAddr = ctx.channel().remoteAddress().toString();
-        log.debug("New data transfer connection coming: {}", clientAddr);
-        clientAddrPublicChannelMapping.put(clientAddr, ctx.channel());
+        Channel remoteChannel = ctx.channel();
+        log.debug("Handler channelActive: {}", remoteChannel);
+        clientAddrPublicChannelMapping.put(clientAddr, remoteChannel);
 
-        Channel channel = ProxyChannelSource.acquire(clientToken);
-        clientAddrProxyChannelMapping.put(clientAddr, channel);
+        Channel proxyChannel = ProxyChannelSource.acquire(clientToken);
+        clientAddrProxyChannelMapping.put(clientAddr, proxyChannel);
         StartProxyMessage respBody = new StartProxyMessage();
         respBody.setUrl(url);
         respBody.setClientAddr(clientAddr);
@@ -48,10 +48,15 @@ public class RemotePortHandler extends NatCommonHandler {
         respMessage.setType(ProxyMessageType.StartProxy.getCode());
         respMessage.setProtocol(ProtocolType.PROXY.getCode());
         respMessage.setBody(respBodyContent);
-        channel.writeAndFlush(respMessage);
+        proxyChannel.writeAndFlush(respMessage);
+    }
 
-        // 连接放回连接池，这里一定记得放回去
-        //pool.release(channel);
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        Channel remoteChannel = ctx.channel();
+        log.debug("Handler channelInactive: {}", remoteChannel);
+        Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddrPublicChannelMapping.inverse().get(remoteChannel));
+        ProxyChannelSource.release(clientToken, proxyChannel);
     }
 
 
@@ -65,7 +70,7 @@ public class RemotePortHandler extends NatCommonHandler {
         String clientAddr = clientAddrPublicChannelMapping.inverse().get(ctx.channel());
         Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
         ByteBuf byteBuf = (ByteBuf) msg;
-        log.info("Write message to proxy channel: {}, data length: {}", proxyChannel.remoteAddress(), byteBuf.readableBytes());
+        log.info("Write message to proxy channel: {}, data length: {}", proxyChannel, byteBuf.readableBytes());
         proxyChannel.writeAndFlush(msg);
     }
 

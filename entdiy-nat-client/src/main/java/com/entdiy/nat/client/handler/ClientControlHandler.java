@@ -39,11 +39,9 @@ public class ClientControlHandler extends NatCommonHandler {
 
     private String clientToken;
 
-
-    private boolean reconnectFlag;
-
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
+        log.debug("ClientControlHandler channelActive: {}", ctx.channel());
         NatClientConfigProperties config = ClientContext.getConfig();
         AuthMessage bodyMessage = new AuthMessage();
         bodyMessage.setClientId(config.getClientId());
@@ -62,12 +60,7 @@ public class ClientControlHandler extends NatCommonHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        log.warn("Tunnel client channelInactive");
-        if (reconnectFlag) {
-            //     NatClientListener.reconnect();
-        } else {
-            //System.exit(0);
-        }
+        log.debug("ClientControlHandler channelInactive: {}", ctx.channel());
     }
 
     @Override
@@ -135,9 +128,9 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 }
                                             });
                                     ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                                    log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqTunnel.name());
+                                    log.info("Connect to tunnel channel: {}", f.channel());
                                     f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
-                                        log.info("Disconnect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqTunnel.name());
+                                        log.info("Disconnect to tunnel channel: {}", t.channel());
                                     });
                                 } catch (InterruptedException e) {
                                     log.error("Proxy connect error", e);
@@ -172,8 +165,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                             }
                                         });
                                 ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                                log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqProxy.name());
-                                //f.channel().closeFuture().sync();
+                                log.info("Connect to proxy channel: {}", f.channel());
                             } catch (InterruptedException e) {
                                 log.error("Proxy connect error", e);
                             }

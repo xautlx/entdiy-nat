@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -95,14 +96,6 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
                             ctx.channel().writeAndFlush(respMessage);
-
-                            //As a performance optimization, ask for a proxy connection up front
-//                            NatMessage reqProxyMessage = NatMessage.build();
-//                            reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
-//                            reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
-//                            reqProxyMessage.setBody(JsonUtil.serialize(new ReqProxyMessage()).getBytes());
-//                            log.debug("Writing message : {}", reqProxyMessage);
-//                            ctx.writeAndFlush(reqProxyMessage);
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
@@ -144,9 +137,13 @@ public class ServerControlHandler extends NatCommonHandler {
                                         });
 
                                 ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
-                                log.info("Listening remote port: {}", bodyMessage.getRemotePort());
+                                log.info("Listening remote channel: {}", f.channel());
                                 listeningRemotePorts.add(bodyMessage.getRemotePort());
-                                f.channel().closeFuture().sync();
+                                f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
+                                    Channel closeRemoteChannel = t.channel();
+                                    log.info("Disconnect to remote channel: {}", closeRemoteChannel);
+                                });
+
                             }
                             //TODO HTTP处理
                         } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
@@ -163,7 +160,7 @@ public class ServerControlHandler extends NatCommonHandler {
                             String body = messageIn.getBodyString();
                             RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
                             log.info("RegProxy client: {}", bodyMessage.getClientToken());
-                            ProxyChannelSource.append(bodyMessage.getClientToken(),ctx.channel());
+                            ProxyChannelSource.add(bodyMessage.getClientToken(), ctx.channel());
                         }
                     }
                 }
@@ -173,8 +170,8 @@ public class ServerControlHandler extends NatCommonHandler {
         } else {
             Channel publicChannel = RemotePortHandler.getPublicChannel(ctx.channel());
             ByteBuf byteBuf = (ByteBuf) msg;
-            log.info("Write message to public channel: {}, data length: {}", publicChannel.remoteAddress(), byteBuf.readableBytes());
-            publicChannel.writeAndFlush(msg);
+            log.info("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
+            publicChannel.writeAndFlush(byteBuf.copy());
         }
     }
 }

@@ -83,7 +83,7 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
                 ReferenceCountUtil.release(msg);
             }
         } else {
-            log.info("Proxy write message to local port " + f.channel().localAddress());
+            log.info("Proxy write message to local channel: {}" , f.channel());
             ByteBuf byteBuf = (ByteBuf) msg;
             f.channel().writeAndFlush(byteBuf.copy());
         }

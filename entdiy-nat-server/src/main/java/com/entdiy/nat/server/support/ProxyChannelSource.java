@@ -5,6 +5,7 @@ import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.util.JsonUtil;
+import com.entdiy.nat.server.handler.RemotePortHandler;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.netty.channel.Channel;
@@ -23,8 +24,8 @@ public class ProxyChannelSource {
         proxyChannelPoolMap.put(natClient.getClientToken(), new ProxyChannelPool(controlChannel, natClient));
     }
 
-    public static void append(String key, Channel channel) {
-        proxyChannelPoolMap.get(key).append(channel);
+    public static void add(String key, Channel channel) {
+        proxyChannelPoolMap.get(key).add(channel);
     }
 
     public static Channel acquire(String key) {
@@ -32,8 +33,7 @@ public class ProxyChannelSource {
     }
 
     public static void release(String key, Channel channel) {
-        //  final FixedChannelPool pool = proxyChannelPool.get(key);
-        // pool.release(channel);
+        proxyChannelPoolMap.get(key).release(channel);
     }
 
     @Slf4j
@@ -47,12 +47,12 @@ public class ProxyChannelSource {
             this.controlChannel = controlChannel;
             this.natClient = natClient;
             for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
-                triggerNew();
+                acquireNew();
             }
             controlChannel.flush();
         }
 
-        private void triggerNew() {
+        private void acquireNew() {
             NatMessage reqProxyMessage = NatMessage.build();
             reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
             reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
@@ -65,12 +65,16 @@ public class ProxyChannelSource {
             log.debug("Proxy channels pool free: {}, using: {}", freeChannels.size(), usingChannels.size());
         }
 
-        public synchronized void append(Channel channel) {
+        public synchronized void add(Channel channel) {
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
-                log.info("Disconnect to proxy channel: {}", closeProxyChannel.remoteAddress());
+                log.info("Disconnect to proxy channel: {}", closeProxyChannel);
                 usingChannels.remove(closeProxyChannel);
                 freeChannels.remove(closeProxyChannel);
+                Channel publicChannel = RemotePortHandler.getPublicChannel(closeProxyChannel);
+                if (publicChannel != null) {
+                    publicChannel.close();
+                }
                 debug();
             });
             freeChannels.add(channel);
@@ -84,13 +88,28 @@ public class ProxyChannelSource {
                 channel = freeChannels.remove(0);
                 freeSize--;
             }
+            //简单处理：如果可用连接数低于核心数则直接新增扩容核心数量连接
             if (freeSize < natClient.getPoolCoreSize()) {
-                triggerNew();
+                for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
+                    acquireNew();
+                }
                 controlChannel.flush();
             }
             usingChannels.add(channel);
             debug();
             return channel;
+        }
+
+        public synchronized void release(Channel channel) {
+            usingChannels.remove(channel);
+            freeChannels.add(channel);
+            debug();
+        }
+
+        public synchronized void remove(Channel channel) {
+            usingChannels.remove(channel);
+            freeChannels.remove(channel);
+            debug();
         }
     }
 }

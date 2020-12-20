@@ -12,7 +12,7 @@ public class TesterHandler extends NatCommonHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf byteBuf = (ByteBuf) msg;
-        log.info("Write tester message to channel: {}, data length: {}", ctx.channel().remoteAddress(), byteBuf.readableBytes());
+        log.info("Write tester message to channel: {}, data length: {}", ctx.channel(), byteBuf.readableBytes());
         ctx.channel().writeAndFlush(byteBuf.copy());
     }
 }

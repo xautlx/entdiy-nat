@@ -44,7 +44,7 @@ public class NatTesterApplication {
 
             ChannelFuture f = b.bind(8888).sync();
             if (f.isSuccess()) {
-                log.info("Listening for control and proxy connections on [::]: {}", f.channel().localAddress());
+                log.info("Listening for control and proxy connections: {}", f.channel());
             }
         } catch (Exception e) {
             log.error("Server error", e);

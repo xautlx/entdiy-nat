@@ -1,7 +1,5 @@
 package com.entdiy.nat.client.handler;
 
-import com.entdiy.nat.client.ClientContext;
-import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.constant.ProxyMessageType;
@@ -71,29 +69,9 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                         String reqBodyString = messageIn.getBodyString();
                         StartProxyMessage reqBody = JsonUtil.deserialize(reqBodyString, StartProxyMessage.class);
 
-                        NatClientConfigProperties config = ClientContext.getConfig();
                         Channel proxyChannel = ctx.channel();
                         Channel targetChannel = targetProxyChannelMapping.get(proxyChannel);
                         if (targetChannel == null) {
-//                            try {
-//                                Bootstrap b = new Bootstrap();
-//                                b.group(group)
-//                                        .channel(NioSocketChannel.class)
-//                                        .option(ChannelOption.TCP_NODELAY, true)
-//                                        .handler(new ChannelInitializer<SocketChannel>() {
-//                                            @Override
-//                                            protected void initChannel(SocketChannel ch) throws SSLException {
-//                                                ChannelPipeline p = ch.pipeline();
-//                                                p.addLast(new ClientProxyHandler(clientToken));
-//                                            }
-//                                        });
-//                                ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-//                                log.info("Connect to remote address {} for {}", f.channel().remoteAddress(), ControlMessageType.ReqProxy.name());
-//                                f.channel().closeFuture().sync();
-//                            } catch (InterruptedException e) {
-//                                log.error("Proxy connect error", e);
-//                            }
-
                             try {
                                 Bootstrap b = new Bootstrap();
                                 b.group(group)
@@ -108,18 +86,23 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                         });
                                 Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
                                 ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
-                                targetChannel = f.channel();
-                                targetProxyChannelMapping.put(proxyChannel, targetChannel);
-                                log.info("Connect to local service: {} ", targetChannel.remoteAddress());
-                                targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
-                                    Channel closeTargetChannel = t.channel();
-                                    log.info("Disconnect to local service: {}", closeTargetChannel.localAddress());
-                                    Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
-                                    targetProxyChannelMapping.remove(closeProxyChannel);
-                                    //closeProxyChannel.close();
-                                });
-                            } catch (InterruptedException e) {
+                                if (f.isSuccess()) {
+                                    targetChannel = f.channel();
+                                    targetProxyChannelMapping.put(proxyChannel, targetChannel);
+                                    log.info("Connect to local channel: {} ", targetChannel);
+                                    targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
+                                        Channel closeTargetChannel = t.channel();
+                                        log.info("Disconnect to local channel: {}", closeTargetChannel);
+                                        Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
+                                        targetProxyChannelMapping.remove(closeProxyChannel);
+                                        closeProxyChannel.close();
+                                    });
+                                } else {
+                                    proxyChannel.close();
+                                }
+                            } catch (Exception e) {
                                 log.error("Proxy connect error", e);
+                                proxyChannel.close();
                             }
                         }
                     }
@@ -130,7 +113,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
         } else {
             ByteBuf byteBuf = (ByteBuf) msg;
             Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
-            log.info("Proxy write message to local port: {}, data length: {}", targetChannel.localAddress(), byteBuf.readableBytes());
+            log.info("Proxy write message to local channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
             targetChannel.writeAndFlush(byteBuf.copy());
         }
     }
