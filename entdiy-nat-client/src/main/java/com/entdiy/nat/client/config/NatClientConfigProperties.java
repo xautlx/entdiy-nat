@@ -1,6 +1,7 @@
 package com.entdiy.nat.client.config;
 
 import com.entdiy.nat.common.model.Tunnel;
+import io.netty.handler.logging.LogLevel;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -25,4 +26,9 @@ public class NatClientConfigProperties {
     private Integer poolMaxSize;
 
     private List<Tunnel> tunnels;
+
+    // TODO 待扩展为从参数读取
+    public LogLevel getHandlerLogLevel() {
+        return LogLevel.INFO;
+    }
 }

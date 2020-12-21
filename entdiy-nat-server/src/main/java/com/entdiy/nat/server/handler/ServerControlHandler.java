@@ -29,7 +29,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -76,12 +75,12 @@ public class ServerControlHandler extends NatCommonHandler {
                 } else {
                     log.debug("Reading message : {}", messageIn);
                     if (messageIn.getProtocol() == ProtocolType.CONTROL.getCode()) {
+                        NatServerConfigProperties config = ServerContext.getConfig();
                         if (messageIn.getType() == ControlMessageType.Auth.getCode()) {
                             String reqBodyString = messageIn.getBodyString();
                             AuthMessage reqBody = JsonUtil.deserialize(reqBodyString, AuthMessage.class);
 
                             log.debug("Processing Auth for: {}", reqBody.getClientId());
-                            NatServerConfigProperties config = ServerContext.getConfig();
                             String clientToken = ServerContext.getControlService().authClient(reqBody);
 
                             AuthRespMessage respBody = new AuthRespMessage();
@@ -132,7 +131,7 @@ public class ServerControlHandler extends NatCommonHandler {
                                             @Override
                                             public void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
                                             }

@@ -1,5 +1,7 @@
 package com.entdiy.nat.client.handler;
 
+import com.entdiy.nat.client.ClientContext;
+import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.constant.ProxyMessageType;
@@ -22,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -68,6 +69,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                 log.debug("Read message: {}", messageIn);
                 if (messageIn.getProtocol() == ProtocolType.PROXY.getCode()) {
                     if (messageIn.getType() == ProxyMessageType.StartProxy.getCode()) {
+                        NatClientConfigProperties config = ClientContext.getConfig();
                         String reqBodyString = messageIn.getBodyString();
                         StartProxyMessage reqBody = JsonUtil.deserialize(reqBodyString, StartProxyMessage.class);
 
@@ -84,7 +86,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                             @Override
                                             protected void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
                                                 p.addLast(new IdleStateHandler(60, 80, 120));
                                                 p.addLast(new FetchDataHandler(proxyChannel));
                                             }

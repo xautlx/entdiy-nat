@@ -15,7 +15,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,19 +27,22 @@ public class NatServerListener extends NatCommonListener {
 
     public void run() {
         try {
-            b.group(bossGroup, workGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-                    .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline p = ch.pipeline();
-                    p.addLast(new LoggingHandler(LogLevel.DEBUG));
-                    p.addLast(new NatMessageDecoder());
-                    p.addLast(new NatMessageEncoder());
-                    p.addLast(new ServerControlHandler());
-                }
-            });
-
             NatServerConfigProperties config = ServerContext.getConfig();
+            b.group(bossGroup, workGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(new LoggingHandler(config.getHandlerLogLevel()))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                            p.addLast(new NatMessageDecoder());
+                            p.addLast(new NatMessageEncoder());
+                            p.addLast(new ServerControlHandler());
+                        }
+                    });
+
             ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
             if (f.isSuccess()) {
                 log.info("Listening for control and proxy connections: {}", f.channel());

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -59,11 +58,6 @@ public class ClientControlHandler extends NatCommonHandler {
         message.setBody(bodyContent);
         log.debug("Write message: {}", message);
         ctx.channel().writeAndFlush(message);
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        log.debug("ClientControlHandler channelInactive: {}", ctx.channel());
     }
 
     @Override
@@ -125,7 +119,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 @Override
                                                 protected void initChannel(SocketChannel ch) throws SSLException {
                                                     ChannelPipeline p = ch.pipeline();
-                                                    p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                    p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
                                                     p.addLast(new IdleStateHandler(60, 80, 120));
                                                     p.addLast(new NatMessageDecoder());
                                                     p.addLast(new NatMessageEncoder());
@@ -164,7 +158,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                             @Override
                                             protected void initChannel(SocketChannel ch) throws SSLException {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));

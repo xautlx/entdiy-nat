@@ -13,7 +13,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -29,6 +28,7 @@ public class NatClientListener {
 
     public NatClientListener() {
         try {
+            NatClientConfigProperties config = ClientContext.getConfig();
             SslContext sslCtx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
             b.group(group)
@@ -40,7 +40,7 @@ public class NatClientListener {
                             ChannelPipeline p = ch.pipeline();
                             //    p.addLast(sslCtx.newHandler(ch.alloc()));
                             p.addLast(new IdleStateHandler(60, 80, 120));
-                            p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                            p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ClientControlHandler());
