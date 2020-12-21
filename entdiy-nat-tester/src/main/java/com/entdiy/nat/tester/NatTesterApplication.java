@@ -1,5 +1,6 @@
 package com.entdiy.nat.tester;
 
+import com.entdiy.nat.tester.handler.NatMessageDecoder;
 import com.entdiy.nat.tester.handler.TesterHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -33,14 +34,19 @@ public class NatTesterApplication {
     @PostConstruct
     public void init() {
         try {
-            b.group(bossGroup, workGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-                    .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline p = ch.pipeline();
-                    p.addLast(new TesterHandler());
-                }
-            });
+            b.group(bossGroup, workGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(new LoggingHandler(LogLevel.DEBUG))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                            p.addLast(new NatMessageDecoder());
+                            p.addLast(new TesterHandler());
+                        }
+                    });
 
             ChannelFuture f = b.bind(8888).sync();
             if (f.isSuccess()) {

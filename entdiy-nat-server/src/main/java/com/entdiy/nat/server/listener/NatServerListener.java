@@ -17,7 +17,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -34,7 +33,7 @@ public class NatServerListener extends NatCommonListener {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
-                    p.addLast(new IdleStateHandler(60, 80, 120));
+                    p.addLast(new LoggingHandler(LogLevel.DEBUG));
                     p.addLast(new NatMessageDecoder());
                     p.addLast(new NatMessageEncoder());
                     p.addLast(new ServerControlHandler());

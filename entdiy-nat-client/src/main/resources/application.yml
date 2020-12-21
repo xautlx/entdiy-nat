@@ -15,6 +15,14 @@ nat:
   serverAddr: 127.0.0.1
   port: 4443
   tunnels:
+    - name: ssh-test
+      host: 25.30.9.146
+      port: 22
+      remotePort: 18068
+    - name: hik-test
+      host: 25.30.14.64
+      port: 8000
+      remotePort: 18070
     - name: hik-001-001
       host: 127.0.0.1
       port: 3306

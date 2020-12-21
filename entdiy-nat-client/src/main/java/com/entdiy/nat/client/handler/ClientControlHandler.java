@@ -23,8 +23,11 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -122,6 +125,8 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 @Override
                                                 protected void initChannel(SocketChannel ch) throws SSLException {
                                                     ChannelPipeline p = ch.pipeline();
+                                                    p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                    p.addLast(new IdleStateHandler(60, 80, 120));
                                                     p.addLast(new NatMessageDecoder());
                                                     p.addLast(new NatMessageEncoder());
                                                     p.addLast(new ClientTunnelHandler(clientToken, tunnel));
@@ -159,6 +164,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                             @Override
                                             protected void initChannel(SocketChannel ch) throws SSLException {
                                                 ChannelPipeline p = ch.pipeline();
+                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));

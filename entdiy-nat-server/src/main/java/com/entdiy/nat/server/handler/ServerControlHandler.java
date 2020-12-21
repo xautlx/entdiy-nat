@@ -126,11 +126,13 @@ public class ServerControlHandler extends NatCommonHandler {
                                 b.group(bossGroup, workerGroup)
                                         .channel(NioServerSocketChannel.class)
                                         .option(ChannelOption.SO_BACKLOG, 100)
-                                        .handler(new LoggingHandler(LogLevel.INFO))
+                                        .option(ChannelOption.SO_KEEPALIVE, true)
+                                        .childOption(ChannelOption.SO_KEEPALIVE, true)
                                         .childHandler(new ChannelInitializer<SocketChannel>() {
                                             @Override
                                             public void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
+                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
                                             }

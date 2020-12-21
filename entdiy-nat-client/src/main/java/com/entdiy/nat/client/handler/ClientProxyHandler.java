@@ -14,7 +14,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -23,6 +22,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,10 +79,13 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                 b.group(group)
                                         .channel(NioSocketChannel.class)
                                         .option(ChannelOption.TCP_NODELAY, true)
+                                        .option(ChannelOption.SO_KEEPALIVE, true)
                                         .handler(new ChannelInitializer<SocketChannel>() {
                                             @Override
                                             protected void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
+                                                p.addLast(new LoggingHandler(LogLevel.DEBUG));
+                                                p.addLast(new IdleStateHandler(60, 80, 120));
                                                 p.addLast(new FetchDataHandler(proxyChannel));
                                             }
                                         });
@@ -90,13 +95,13 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                     targetChannel = f.channel();
                                     targetProxyChannelMapping.put(proxyChannel, targetChannel);
                                     log.info("Connect to local channel: {} ", targetChannel);
-                                    targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
-                                        Channel closeTargetChannel = t.channel();
-                                        log.info("Disconnect to local channel: {}", closeTargetChannel);
-                                        Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
-                                        targetProxyChannelMapping.remove(closeProxyChannel);
-                                        closeProxyChannel.close();
-                                    });
+//                                    targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
+//                                        Channel closeTargetChannel = t.channel();
+//                                        log.info("Disconnect to local channel: {}", closeTargetChannel);
+//                                        Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
+//                                        targetProxyChannelMapping.remove(closeProxyChannel);
+//                                        closeProxyChannel.close();
+//                                    });
                                 } else {
                                     proxyChannel.close();
                                 }
@@ -113,7 +118,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
         } else {
             ByteBuf byteBuf = (ByteBuf) msg;
             Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
-            log.info("Proxy write message to local channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
+            log.info("Write message to local channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
             targetChannel.writeAndFlush(byteBuf.copy());
         }
     }

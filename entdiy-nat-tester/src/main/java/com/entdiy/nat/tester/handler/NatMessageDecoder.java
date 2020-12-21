@@ -1,4 +1,4 @@
-package com.entdiy.nat.common.codec;
+package com.entdiy.nat.tester.handler;
 
 import com.entdiy.nat.common.model.NatMessage;
 import io.netty.buffer.ByteBuf;
@@ -12,9 +12,9 @@ import java.util.List;
 public class NatMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List out) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List out) throws Exception {
         int readableBytes = in.readableBytes();
-        log.debug("Decode message for channel: {}, bytes size: {}", ctx.channel(), readableBytes);
+        log.debug("Decode bytes size: {}", readableBytes);
         boolean netMessageRead = true;
         while (netMessageRead && in.readerIndex() < readableBytes) {
             int crcCode = readableBytes > 8 ? in.readInt() : -1;
@@ -31,14 +31,12 @@ public class NatMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
                 in.readBytes(body);
                 message.setBody(body);
                 out.add(message);
-
-                log.debug("Decode to message: {}", message);
             } else {
                 netMessageRead = false;
-                in.resetReaderIndex();
                 in.retain();
+                log.debug("Decode 2 bytes size: {}", readableBytes);
                 out.add(in);
-                log.debug("Decode retain message directly");
+                log.debug("Decode 3 bytes size: {}", readableBytes);
             }
         }
     }

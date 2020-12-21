@@ -17,7 +17,7 @@ public class FetchDataHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
-        log.info("FetchData write message to remote channel: {}, {} bytes", proxyChannel, byteBuf.readableBytes());
+        log.info("Write message back to proxy channel: {}, {} bytes", proxyChannel, byteBuf.readableBytes());
         proxyChannel.writeAndFlush(byteBuf.copy());
     }
 }
