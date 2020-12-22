@@ -31,12 +31,12 @@ public class NatServerListener extends NatCommonListener {
             b.group(bossGroup, workGroup)
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, 100)
-                    .handler(new LoggingHandler(config.getHandlerLogLevel()))
+                    .handler(new LoggingHandler())
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
-                            p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                            p.addLast(new LoggingHandler());
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ServerControlHandler());

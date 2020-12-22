@@ -17,6 +17,7 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <jar-output-dir>./target</jar-output-dir>
     </properties>
 
     <modules>
@@ -138,5 +139,29 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <!-- 基于maven-jar-plugin输出微服务jar文件进行二次spring boot重新打包文件的输出目录 -->
+                        <outputDirectory>${jar-output-dir}</outputDirectory>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>

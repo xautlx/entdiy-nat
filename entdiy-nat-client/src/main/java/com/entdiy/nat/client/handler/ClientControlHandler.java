@@ -2,6 +2,7 @@ package com.entdiy.nat.client.handler;
 
 import com.entdiy.nat.client.ClientContext;
 import com.entdiy.nat.client.config.NatClientConfigProperties;
+import com.entdiy.nat.client.constant.TunnelsModeEnum;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.ControlMessageType;
@@ -13,6 +14,7 @@ import com.entdiy.nat.common.model.InitProxyMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
+import com.google.common.collect.Lists;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -29,10 +31,12 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import javax.net.ssl.SSLException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class ClientControlHandler extends NatCommonHandler {
@@ -108,7 +112,20 @@ public class ClientControlHandler extends NatCommonHandler {
                             log.debug("Get Auth ClientToken: {}", reqBody.getClientToken());
                             clientToken = reqBody.getClientToken();
 
-                            List<Tunnel> tunnels = config.getTunnels();
+                            List<Tunnel> tunnels = Lists.newArrayList();
+                            Map<String,Tunnel> configTunnels= config.getTunnels();
+                            if( TunnelsModeEnum.server.equals(config.getTunnelsMode())){
+                               configTunnels=reqBody.getTunnels();
+                            }
+                            if(configTunnels!=null && configTunnels.size()>0){
+                                for(Map.Entry<String,Tunnel> me:configTunnels.entrySet()){
+                                    Tunnel tunnel=me.getValue();
+                                    tunnel.setCode(me.getKey());
+                                    tunnels.add(tunnel);
+                                }
+                            }
+                            Assert.isTrue(tunnels.size()>0,"Tunnels can't be empty");
+
                             for (Tunnel tunnel : tunnels) {
                                 try {
                                     Bootstrap b = new Bootstrap();
@@ -119,7 +136,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 @Override
                                                 protected void initChannel(SocketChannel ch) throws SSLException {
                                                     ChannelPipeline p = ch.pipeline();
-                                                    p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                                                    p.addLast(new LoggingHandler());
                                                     p.addLast(new IdleStateHandler(60, 80, 120));
                                                     p.addLast(new NatMessageDecoder());
                                                     p.addLast(new NatMessageEncoder());
@@ -158,7 +175,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                             @Override
                                             protected void initChannel(SocketChannel ch) throws SSLException {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                                                p.addLast(new LoggingHandler());
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));

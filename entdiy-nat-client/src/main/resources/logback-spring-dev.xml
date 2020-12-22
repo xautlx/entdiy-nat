@@ -13,7 +13,7 @@
 	<logger name="com.entdiy" level="DEBUG" additivity="false">
 		<appender-ref ref="CONSOLE"/>
 	</logger>
-	<logger name="io.netty.handler.logging" level="DEBUG" additivity="false">
+	<logger name="io.netty.handler.logging" level="INFO" additivity="false">
 		<appender-ref ref="CONSOLE"/>
 	</logger>
 

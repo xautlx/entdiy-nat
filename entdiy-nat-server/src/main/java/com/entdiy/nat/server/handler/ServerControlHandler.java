@@ -131,7 +131,7 @@ public class ServerControlHandler extends NatCommonHandler {
                                             @Override
                                             public void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                                                p.addLast(new LoggingHandler());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
                                             }

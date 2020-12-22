@@ -3,8 +3,10 @@ server:
   servlet:
     context-path: /nat
 spring:
+  application:
+    name: entdiy-nat-client
   profiles:
-    include: nat-server
+    include: server
 nat:
   domain: 127.0.0.1
   httpAddr: 80

@@ -1,11 +1,10 @@
 package com.entdiy.nat.client.config;
 
 import com.entdiy.nat.common.model.Tunnel;
-import io.netty.handler.logging.LogLevel;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.List;
+import java.util.Map;
 
 @Data
 @ConfigurationProperties(prefix = "nat")
@@ -25,10 +24,8 @@ public class NatClientConfigProperties {
     private Integer poolIdleSize;
     private Integer poolMaxSize;
 
-    private List<Tunnel> tunnels;
+    private String tunnelsMode;
+    private Map<String, Tunnel> tunnels;
 
-    // TODO 待扩展为从参数读取
-    public LogLevel getHandlerLogLevel() {
-        return LogLevel.INFO;
-    }
+
 }

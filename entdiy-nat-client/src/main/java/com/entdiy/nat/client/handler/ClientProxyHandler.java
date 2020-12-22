@@ -86,7 +86,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                             @Override
                                             protected void initChannel(SocketChannel ch) {
                                                 ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                                                p.addLast(new LoggingHandler());
                                                 p.addLast(new IdleStateHandler(60, 80, 120));
                                                 p.addLast(new FetchDataHandler(proxyChannel));
                                             }

@@ -26,9 +26,9 @@ public class NatClientListener {
     private static final EventLoopGroup group = new NioEventLoopGroup();
     private static Bootstrap b = new Bootstrap();
 
-    public NatClientListener() {
+    public void run() {
+        NatClientConfigProperties config = ClientContext.getConfig();
         try {
-            NatClientConfigProperties config = ClientContext.getConfig();
             SslContext sslCtx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
             b.group(group)
@@ -40,24 +40,22 @@ public class NatClientListener {
                             ChannelPipeline p = ch.pipeline();
                             //    p.addLast(sslCtx.newHandler(ch.alloc()));
                             p.addLast(new IdleStateHandler(60, 80, 120));
-                            p.addLast(new LoggingHandler(config.getHandlerLogLevel()));
+                            p.addLast(new LoggingHandler());
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ClientControlHandler());
                         }
                     });
+
+            log.debug("Start connect to server {}:{}", config.getServerAddr(), config.getPort());
+            b.connect(config.getServerAddr(), config.getPort()).sync();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Connect to server failure {}:{}", config.getServerAddr(), config.getPort(), e);
         }
     }
 
-    public void run() {
-        try {
-            NatClientConfigProperties config = ClientContext.getConfig();
-            log.debug("Start connect...");
-            b.connect(config.getServerAddr(), config.getPort()).sync();
-        } catch (Exception e) {
-            log.error("ERROR", e);
-        }
+    public void shutdown() {
+        log.info("Going to shutdownGracefully...");
+        group.shutdownGracefully();
     }
 }

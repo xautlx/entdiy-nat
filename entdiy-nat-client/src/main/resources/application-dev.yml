@@ -1,0 +1,39 @@
+server:
+  port: 8086
+logging:
+  level:
+    com.entdiy: DEBUG
+    io.netty.handler.logging: INFO
+    root: INFO
+  config: classpath:logback-spring-dev.xml
+nat:
+  clientId: ABC-EDF
+  clientSecret: 123456
+
+  serverAddr: 127.0.0.1
+  port: 4443
+  # 穿透通道定义模式：
+  # client = 客户端本地tunnels配置为准，忽略server端配置
+  # server = server端定义为准，忽略本地tunnels配置
+  tunnelsMode: "client"
+  tunnels:
+    ssh-test:
+      host: 25.30.9.146
+      port: 22
+      remotePort: 18068
+    hik-test:
+      host: 25.30.14.64
+      port: 8000
+      remotePort: 18070
+    hik-001-001:
+      host: 127.0.0.1
+      port: 3306
+      remotePort: 18075
+    hik-001-002:
+      host: 127.0.0.1
+      port: 6379
+      remotePort: 18074
+    tester:
+      host: 127.0.0.1
+      port: 8888
+      remotePort: 18073
