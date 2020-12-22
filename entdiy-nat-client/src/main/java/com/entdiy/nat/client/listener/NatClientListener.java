@@ -55,7 +55,7 @@ public class NatClientListener {
     }
 
     public void shutdown() {
-        log.info("Going to shutdownGracefully...");
         group.shutdownGracefully();
+        log.info("Done shutdownGracefully!");
     }
 }
