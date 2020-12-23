@@ -10,7 +10,6 @@ spring:
   profiles:
     include: server
 logging:
-  level:
   config: classpath:logback-spring-prd.xml
 nat:
   version: 1.0.0

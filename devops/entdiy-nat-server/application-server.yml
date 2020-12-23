@@ -1,6 +1,9 @@
 server:
   # Web管理端口，默认0表示随机端口(可通过启动日志查看运行端口)，亦可设定为当前机器空闲固定网络端口
   port: 0
+logging:
+  level:
+    root: INFO
 nat:
   domain: 127.0.0.1
   httpAddr: 80
