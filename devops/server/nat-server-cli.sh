@@ -7,8 +7,8 @@ export SHELL_DIR="$( cd "$( dirname "$0"  )" && pwd  )"
 export BASE_DIR="$( cd "${SHELL_DIR}/." && pwd  )"
 #echo "Using BASE_DIR: ${BASE_DIR}"
 
-APP_NAME="entdiy-nat-client"
-WAIT_SECONDS=10
+APP_NAME="entdiy-nat-server"
+WAIT_SECONDS=20
 
 case "$1" in
     startup)

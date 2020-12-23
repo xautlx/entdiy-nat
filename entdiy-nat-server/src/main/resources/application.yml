@@ -3,14 +3,15 @@ server:
   servlet:
     context-path: /nat
 spring:
+  main:
+    banner-mode: off
   application:
-    name: entdiy-nat-client
+    name: entdiy-nat-server
   profiles:
     include: server
+logging:
+  level:
+  config: classpath:logback-spring-prd.xml
 nat:
-  domain: 127.0.0.1
-  httpAddr: 80
-  httpsAddr: 443
-  tunnelAddr: 4443
   version: 1.0.0
   mmVersion: S20201212
