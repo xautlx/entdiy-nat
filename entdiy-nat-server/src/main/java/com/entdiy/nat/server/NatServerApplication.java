@@ -28,6 +28,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 @SpringBootApplication
 @EnableConfigurationProperties(NatServerConfigProperties.class)
@@ -46,6 +47,11 @@ public class NatServerApplication implements ApplicationContextAware {
     public void init() {
         ServerContext.setConfig(config);
         natServerListener.run();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        natServerListener.shutdown();
     }
 
     @Override

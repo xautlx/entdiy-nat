@@ -61,14 +61,17 @@ public class NatServerListener extends NatCommonListener {
                     });
 
             ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
-            if (f.isSuccess()) {
-                log.info("Listening for control and proxy connections: {}", f.channel());
-            }
+            log.info("Listening for control and proxy connections: {}", f.channel());
         } catch (Exception e) {
             log.error("ServerBootstrap bind error", e);
         } finally {
-            //bossGroup.shutdownGracefully();
-            //workGroup.shutdownGracefully();
+
         }
+    }
+
+    public void shutdown() {
+        bossGroup.shutdownGracefully();
+        workGroup.shutdownGracefully();
+        log.info("Done shutdownGracefully!");
     }
 }
