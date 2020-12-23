@@ -24,6 +24,7 @@
         <module>entdiy-nat-common</module>
         <module>entdiy-nat-server</module>
         <module>entdiy-nat-client</module>
+        <module>entdiy-nat-tester</module>
     </modules>
 
     <repositories>
