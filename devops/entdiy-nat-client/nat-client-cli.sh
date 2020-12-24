@@ -11,14 +11,14 @@ APP_NAME="entdiy-nat-client"
 WAIT_SECONDS=10
 
 case "$1" in
-    startup)
+    start)
     echo Startup ${APP_NAME} ...
     nohup java -jar -Dspring.profiles.active=prd ${BASE_DIR}/${APP_NAME}.jar > nohup.out 2>&1 &
     echo $! > ${BASE_DIR}/${APP_NAME}.pid
     echo Application logs write to file: ${BASE_DIR}/logs/${APP_NAME}.log
     tail -f ${BASE_DIR}/nohup.out
     ;;
-    shutdown)
+    stop)
     echo Shutdown ${APP_NAME} ...
     if [ -e "${BASE_DIR}/${APP_NAME}.pid" ]; then
       PID=$(cat ${BASE_DIR}/${APP_NAME}.pid)
@@ -48,14 +48,14 @@ case "$1" in
     ps -ef|grep java| grep ${APP_NAME}
     ;;
     restart)
-    $0 shutdown
-    $0 startup
+    $0 stop
+    $0 start
     ;;
     status)
     ps -ef|grep java| grep ${APP_NAME}
     ;;
     *)
-    echo "Usage: $0 {startup|shutdown|restart|status}"
+    echo "Usage: $0 {start|stop|restart|status}"
     exit 1
     ;;
 esac

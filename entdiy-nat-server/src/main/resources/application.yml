@@ -9,6 +9,7 @@ spring:
     name: entdiy-nat-server
   profiles:
     include: server
+    active: dev
 logging:
   config: classpath:logback-spring-prd.xml
 nat:

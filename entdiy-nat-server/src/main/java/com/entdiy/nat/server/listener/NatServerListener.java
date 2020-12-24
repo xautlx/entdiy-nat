@@ -59,7 +59,7 @@ public class NatServerListener extends NatCommonListener {
                             p.addLast(new ServerControlHandler());
                         }
                     });
-
+            log.info("Start bind port: {}", config.getTunnelAddr());
             ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
             log.info("Listening for control and proxy connections: {}", f.channel());
         } catch (Exception e) {
