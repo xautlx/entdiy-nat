@@ -24,11 +24,11 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class FetchDataHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class ClientLocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private Channel proxyChannel;
 
-    FetchDataHandler(Channel proxyChannel) {
+    ClientLocalHandler(Channel proxyChannel) {
         this.proxyChannel = proxyChannel;
     }
 

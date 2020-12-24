@@ -24,11 +24,8 @@ import com.entdiy.nat.common.model.NewTunnelMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
@@ -45,8 +42,6 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
 
     private Tunnel tunnel;
     private String clientToken;
-    private ChannelFuture f;
-    private static NioEventLoopGroup group = new NioEventLoopGroup(1);
 
     public ClientTunnelHandler(String clientToken,Tunnel tunnel) {
         this.clientToken=clientToken;
@@ -55,7 +50,7 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        Assert.hasText(tunnel.getName(), "Tunnel 'name' required");
+        Assert.hasText(tunnel.getCode(), "Tunnel 'code' required");
         ReqTunnelMessage bodyMessage = new ReqTunnelMessage();
         bodyMessage.setClientToken(clientToken);
         String reqId = UUID.randomUUID().toString();
@@ -99,10 +94,6 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
             } finally {
                 ReferenceCountUtil.release(msg);
             }
-        } else {
-            log.info("Proxy write message to local channel: {}" , f.channel());
-            ByteBuf byteBuf = (ByteBuf) msg;
-            f.channel().writeAndFlush(byteBuf.copy());
         }
     }
 

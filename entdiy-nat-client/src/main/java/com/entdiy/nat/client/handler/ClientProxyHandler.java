@@ -105,7 +105,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                                 ChannelPipeline p = ch.pipeline();
                                                 p.addLast(new LoggingHandler());
                                                 p.addLast(new IdleStateHandler(60, 80, 120));
-                                                p.addLast(new FetchDataHandler(proxyChannel));
+                                                p.addLast(new ClientLocalHandler(proxyChannel));
                                             }
                                         });
                                 Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
