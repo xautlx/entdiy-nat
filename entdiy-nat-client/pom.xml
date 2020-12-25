@@ -11,7 +11,7 @@
     <artifactId>entdiy-nat-client</artifactId>
 
     <properties>
-        <jar-output-dir>../devops/client</jar-output-dir>
+        <jar-output-dir>../devops/entdiy-nat-client</jar-output-dir>
     </properties>
 
     <dependencies>

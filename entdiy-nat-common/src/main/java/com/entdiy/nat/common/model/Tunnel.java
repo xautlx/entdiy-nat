@@ -1,5 +1,5 @@
 /**
- * Copyright @ 2020-2020 EntDIY NAT (like Ngrok) based on Netty
+ * Copyright @ 2020-2020 EntDIY-NAT (like Ngrok) based on Netty
  *
  * Author: Li Xia, E-Mail: xautlx@hotmail.com
  *

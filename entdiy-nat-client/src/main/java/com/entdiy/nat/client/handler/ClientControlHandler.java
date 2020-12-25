@@ -1,5 +1,5 @@
 /**
- * Copyright @ 2020-2020 EntDIY NAT (like Ngrok) based on Netty
+ * Copyright @ 2020-2020 EntDIY-NAT (like Ngrok) based on Netty
  *
  * Author: Li Xia, E-Mail: xautlx@hotmail.com
  *
@@ -180,7 +180,7 @@ public class ClientControlHandler extends NatCommonHandler {
                             message.setProtocol(ProtocolType.CONTROL.getCode());
                             message.setType(ControlMessageType.InitProxy.getCode());
                             message.setBody(content);
-                            log.trace("Write message: {}", message);
+                            log.debug("Write message: {}", message);
                             ctx.channel().writeAndFlush(message);
                         } else if (messageIn.getType() == ControlMessageType.ReqProxy.getCode()) {
                             try {

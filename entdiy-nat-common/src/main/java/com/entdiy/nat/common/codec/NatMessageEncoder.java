@@ -1,5 +1,5 @@
 /**
- * Copyright @ 2020-2020 EntDIY NAT (like Ngrok) based on Netty
+ * Copyright @ 2020-2020 EntDIY-NAT (like Ngrok) based on Netty
  *
  * Author: Li Xia, E-Mail: xautlx@hotmail.com
  *
@@ -28,7 +28,7 @@ public class NatMessageEncoder extends MessageToByteEncoder<NatMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, NatMessage msg, ByteBuf out) throws Exception {
-        log.debug("Encode message for channel: {}, message: {}", ctx.channel(), msg);
+        log.trace("Encode message for channel: {}, message: {}", ctx.channel(), msg);
         out.writeInt(msg.getCrcCode());
         out.writeInt(msg.getLength());
         out.writeByte(msg.getProtocol());

@@ -1,5 +1,5 @@
 /**
- * Copyright @ 2020-2020 EntDIY NAT (like Ngrok) based on Netty
+ * Copyright @ 2020-2020 EntDIY-NAT (like Ngrok) based on Netty
  *
  * Author: Li Xia, E-Mail: xautlx@hotmail.com
  *
@@ -142,8 +142,6 @@ public class ServerControlHandler extends NatCommonHandler {
                                 b.group(bossGroup, workerGroup)
                                         .channel(NioServerSocketChannel.class)
                                         .option(ChannelOption.SO_BACKLOG, 100)
-                                        .option(ChannelOption.SO_KEEPALIVE, true)
-                                        .childOption(ChannelOption.SO_KEEPALIVE, true)
                                         .childHandler(new ChannelInitializer<SocketChannel>() {
                                             @Override
                                             public void initChannel(SocketChannel ch) {

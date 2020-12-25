@@ -161,6 +161,13 @@
                         <!-- 基于maven-jar-plugin输出微服务jar文件进行二次spring boot重新打包文件的输出目录 -->
                         <outputDirectory>${jar-output-dir}</outputDirectory>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
