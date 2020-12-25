@@ -3,10 +3,12 @@ server:
   port: 0
 logging:
   level:
+    com.entdiy: INFO
+    io.netty.handler.logging: INFO
     root: INFO
 nat:
-  clientId:
-  clientSecret:
+  clientId: entdiy
+  clientSecret: entdiy123
 
   serverAddr: 127.0.0.1
   port: 4443

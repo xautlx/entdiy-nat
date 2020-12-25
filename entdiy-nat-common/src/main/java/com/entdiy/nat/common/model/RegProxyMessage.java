@@ -18,7 +18,9 @@
 package com.entdiy.nat.common.model;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString(callSuper=true)
 public class RegProxyMessage extends BaseRequestMessage{
 }

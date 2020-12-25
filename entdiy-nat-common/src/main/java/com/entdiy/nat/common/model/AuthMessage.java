@@ -18,8 +18,10 @@
 package com.entdiy.nat.common.model;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString(callSuper=true)
 public class AuthMessage {
     private String version;
     private String mmVersion;

@@ -48,14 +48,13 @@ public class NatMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
                 in.readBytes(body);
                 message.setBody(body);
                 out.add(message);
-
-                log.debug("Decode to message: {}", message);
+                log.trace("Decode to message: {}", message);
             } else {
                 netMessageRead = false;
                 in.resetReaderIndex();
                 in.retain();
                 out.add(in);
-                log.debug("Decode retain message directly");
+                log.trace("Decode retain message directly");
             }
         }
     }

@@ -18,10 +18,12 @@
 package com.entdiy.nat.common.model;
 
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.Map;
 
 @Data
+@ToString(callSuper=true)
 public class AuthRespMessage extends BaseResponseMessage {
     private String version;
     private String mmVersion;

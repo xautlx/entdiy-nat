@@ -19,8 +19,10 @@ package com.entdiy.nat.common.model;
 
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString(callSuper=true)
 public class ProxyingMessage extends BaseResponseMessage {
     // URL of the tunnel this connection connection is being proxied for
     private String url;

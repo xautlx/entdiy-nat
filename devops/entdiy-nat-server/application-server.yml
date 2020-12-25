@@ -3,6 +3,8 @@ server:
   port: 0
 logging:
   level:
+    com.entdiy: INFO
+    io.netty.handler.logging: INFO
     root: INFO
 nat:
   domain: 127.0.0.1

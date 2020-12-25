@@ -18,8 +18,10 @@
 package com.entdiy.nat.common.model;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString(callSuper=true)
 public class StartProxyMessage extends BaseResponseMessage{
     // Network address of the client initiating the connection to the tunnel
     private String clientAddr;
