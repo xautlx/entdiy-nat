@@ -10,6 +10,8 @@ nat:
   clientId: ABC-EDF
   clientSecret: 123456
 
+  #serverAddr: entdiy.com
+  #port: 5555
   serverAddr: 127.0.0.1
   port: 4443
   # 穿透通道定义模式：
@@ -18,9 +20,9 @@ nat:
   tunnelsMode: "client"
   tunnels:
     ssh-test:
-      host: 25.30.9.146
+      host: 127.0.0.1
       port: 22
-      remotePort: 18068
+      remotePort: 2222
     hik-test:
       host: 25.30.14.64
       port: 8000

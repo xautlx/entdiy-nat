@@ -74,6 +74,15 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        Channel proxyChannel = ctx.channel();
+        log.debug("ClientProxyHandler channelInactive: {}", proxyChannel);
+        Channel localChannel = targetProxyChannelMapping.get(proxyChannel);
+        log.debug("Closing target channel: {}", localChannel);
+        localChannel.close();
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
         log.trace("Control read message: {}", msg);
         if (msg == null) {
@@ -91,43 +100,33 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                         StartProxyMessage reqBody = JsonUtil.deserialize(reqBodyString, StartProxyMessage.class);
 
                         Channel proxyChannel = ctx.channel();
-                        Channel targetChannel = targetProxyChannelMapping.get(proxyChannel);
-                        if (targetChannel == null) {
-                            try {
-                                Bootstrap b = new Bootstrap();
-                                b.group(group)
-                                        .channel(NioSocketChannel.class)
-                                        .option(ChannelOption.TCP_NODELAY, true)
-                                        .option(ChannelOption.SO_KEEPALIVE, true)
-                                        .handler(new ChannelInitializer<SocketChannel>() {
-                                            @Override
-                                            protected void initChannel(SocketChannel ch) {
-                                                ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler());
-                                                p.addLast(new IdleStateHandler(60, 80, 120));
-                                                p.addLast(new ClientLocalHandler(proxyChannel));
-                                            }
-                                        });
-                                Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
-                                ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
-                                if (f.isSuccess()) {
-                                    targetChannel = f.channel();
-                                    targetProxyChannelMapping.put(proxyChannel, targetChannel);
-                                    log.info("Connect to local channel: {} ", targetChannel);
-//                                    targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
-//                                        Channel closeTargetChannel = t.channel();
-//                                        log.info("Disconnect to local channel: {}", closeTargetChannel);
-//                                        Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
-//                                        targetProxyChannelMapping.remove(closeProxyChannel);
-//                                        closeProxyChannel.close();
-//                                    });
-                                } else {
-                                    proxyChannel.close();
-                                }
-                            } catch (Exception e) {
-                                log.error("Proxy connect error", e);
+                        try {
+                            Bootstrap b = new Bootstrap();
+                            b.group(group)
+                                    .channel(NioSocketChannel.class)
+                                    .option(ChannelOption.TCP_NODELAY, true)
+                                    .option(ChannelOption.SO_KEEPALIVE, true)
+                                    .handler(new ChannelInitializer<SocketChannel>() {
+                                        @Override
+                                        protected void initChannel(SocketChannel ch) {
+                                            ChannelPipeline p = ch.pipeline();
+                                            p.addLast(new LoggingHandler());
+                                            p.addLast(new IdleStateHandler(60, 80, 120));
+                                            p.addLast(new ClientTargetHandler(proxyChannel));
+                                        }
+                                    });
+                            Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
+                            ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
+                            if (f.isSuccess()) {
+                                Channel targetChannel = f.channel();
+                                targetProxyChannelMapping.put(proxyChannel, targetChannel);
+                                log.info("Connect to target channel: {} ", targetChannel);
+                            } else {
                                 proxyChannel.close();
                             }
+                        } catch (Exception e) {
+                            log.error("Proxy connect error", e);
+                            proxyChannel.close();
                         }
                     }
                 }
@@ -137,7 +136,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
         } else {
             ByteBuf byteBuf = (ByteBuf) msg;
             Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
-            log.info("Write message to local channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
+            log.info("Write message to target channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
             targetChannel.writeAndFlush(byteBuf.copy());
         }
     }

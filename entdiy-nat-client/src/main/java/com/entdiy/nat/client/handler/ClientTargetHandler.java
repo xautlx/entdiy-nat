@@ -24,12 +24,20 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ClientLocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class ClientTargetHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private Channel proxyChannel;
 
-    ClientLocalHandler(Channel proxyChannel) {
+    public ClientTargetHandler(Channel proxyChannel) {
         this.proxyChannel = proxyChannel;
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        Channel targetChannel = ctx.channel();
+        log.debug("ClientTargetHandler channelInactive: {}", targetChannel);
+        log.debug("Closing  proxy channel: {}", proxyChannel);
+        proxyChannel.close();
     }
 
     @Override

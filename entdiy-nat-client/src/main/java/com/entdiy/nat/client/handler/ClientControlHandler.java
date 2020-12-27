@@ -188,6 +188,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                 b.group(group)
                                         .channel(NioSocketChannel.class)
                                         .option(ChannelOption.TCP_NODELAY, true)
+                                        .option(ChannelOption.SO_KEEPALIVE, true)
                                         .handler(new ChannelInitializer<SocketChannel>() {
                                             @Override
                                             protected void initChannel(SocketChannel ch) throws SSLException {
@@ -200,6 +201,9 @@ public class ClientControlHandler extends NatCommonHandler {
                                         });
                                 ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
                                 log.info("Connect to proxy channel: {}", f.channel());
+                                f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
+                                    log.info("Disconnect to proxy channel: {}", t.channel());
+                                });
                             } catch (InterruptedException e) {
                                 log.error("Proxy connect error", e);
                             }

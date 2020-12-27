@@ -76,7 +76,7 @@ public class RemotePortHandler extends NatCommonHandler {
         Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
         clientAddrProxyChannelMapping.remove(clientAddr);
         clientAddrPublicChannelMapping.remove(clientAddr);
-        ProxyChannelSource.release(clientToken, proxyChannel);
+        proxyChannel.close();
     }
 
 

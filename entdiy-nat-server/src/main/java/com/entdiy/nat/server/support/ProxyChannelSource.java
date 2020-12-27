@@ -49,16 +49,11 @@ public class ProxyChannelSource {
         return proxyChannelPoolMap.get(key).acquire();
     }
 
-    public static void release(String key, Channel channel) {
-        proxyChannelPoolMap.get(key).release(channel);
-    }
-
     @Slf4j
     public static class ProxyChannelPool {
         private Channel controlChannel;
         private NatClient natClient;
         private List<Channel> freeChannels = Lists.newArrayList();
-        private List<Channel> usingChannels = Lists.newArrayList();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
             this.controlChannel = controlChannel;
@@ -79,26 +74,26 @@ public class ProxyChannelSource {
         }
 
         private void debug() {
-            log.debug("Proxy channels pool free: {}, using: {}", freeChannels.size(), usingChannels.size());
+            log.debug("Proxy channels pool free: {}", freeChannels.size());
         }
 
         public synchronized void add(Channel channel) {
+            log.debug("ProxyChannelPool add: {}, {}", natClient, channel);
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
                 log.info("Disconnect to proxy channel: {}", closeProxyChannel);
-                usingChannels.remove(closeProxyChannel);
-                freeChannels.remove(closeProxyChannel);
                 Channel publicChannel = RemotePortHandler.getPublicChannel(closeProxyChannel);
                 if (publicChannel != null) {
+                    log.info("Closing public channel: {}", publicChannel);
                     publicChannel.close();
                 }
-                debug();
             });
             freeChannels.add(channel);
             debug();
         }
 
         public synchronized Channel acquire() {
+            log.debug("ProxyChannelPool acquire: {}", natClient);
             Channel channel = null;
             int freeSize = freeChannels.size();
             if (freeSize > 0) {
@@ -106,27 +101,14 @@ public class ProxyChannelSource {
                 freeSize--;
             }
             //简单处理：如果可用连接数低于核心数则直接新增扩容核心数量连接
-            if (freeSize < natClient.getPoolCoreSize()) {
+            if (freeSize <= natClient.getPoolCoreSize()) {
                 for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
                     acquireNew();
                 }
                 controlChannel.flush();
             }
-            usingChannels.add(channel);
             debug();
             return channel;
-        }
-
-        public synchronized void release(Channel channel) {
-            usingChannels.remove(channel);
-            freeChannels.add(channel);
-            debug();
-        }
-
-        public synchronized void remove(Channel channel) {
-            usingChannels.remove(channel);
-            freeChannels.remove(channel);
-            debug();
         }
     }
 }
