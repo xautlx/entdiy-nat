@@ -51,7 +51,7 @@ public class RemotePortHandler extends NatCommonHandler {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Channel remoteChannel = ctx.channel();
         String clientAddr = remoteChannel.remoteAddress().toString();
-        log.debug("Handler channelActive: {}", remoteChannel);
+        log.debug("RemotePortHandler channelActive: {}", remoteChannel);
         clientAddrPublicChannelMapping.put(clientAddr, remoteChannel);
 
         Channel proxyChannel = ProxyChannelSource.acquire(clientToken);
@@ -71,7 +71,7 @@ public class RemotePortHandler extends NatCommonHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel remoteChannel = ctx.channel();
-        log.debug("Handler channelInactive: {}", remoteChannel);
+        log.debug("RemotePortHandler channelInactive: {}", remoteChannel);
         String clientAddr = clientAddrPublicChannelMapping.inverse().get(remoteChannel);
         Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
         clientAddrProxyChannelMapping.remove(clientAddr);

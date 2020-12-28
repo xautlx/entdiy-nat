@@ -78,8 +78,10 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
         Channel proxyChannel = ctx.channel();
         log.debug("ClientProxyHandler channelInactive: {}", proxyChannel);
         Channel localChannel = targetProxyChannelMapping.get(proxyChannel);
-        log.debug("Closing target channel: {}", localChannel);
-        localChannel.close();
+        if (localChannel != null) {
+            log.debug("Closing target channel: {}", localChannel);
+            localChannel.close();
+        }
     }
 
     @Override

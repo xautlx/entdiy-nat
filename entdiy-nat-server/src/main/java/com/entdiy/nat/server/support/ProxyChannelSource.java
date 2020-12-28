@@ -23,14 +23,14 @@ import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.handler.RemotePortHandler;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @Slf4j
 public class ProxyChannelSource {
@@ -53,7 +53,7 @@ public class ProxyChannelSource {
     public static class ProxyChannelPool {
         private Channel controlChannel;
         private NatClient natClient;
-        private List<Channel> freeChannels = Lists.newArrayList();
+        private BlockingQueue<Channel> freeChannels = new LinkedBlockingQueue();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
             this.controlChannel = controlChannel;
@@ -88,18 +88,18 @@ public class ProxyChannelSource {
                     publicChannel.close();
                 }
             });
-            freeChannels.add(channel);
-            debug();
+
+            try {
+                freeChannels.put(channel);
+                debug();
+            } catch (InterruptedException e) {
+                throw new RuntimeException("freeChannels put error", e);
+            }
         }
 
         public synchronized Channel acquire() {
             log.debug("ProxyChannelPool acquire: {}", natClient);
-            Channel channel = null;
             int freeSize = freeChannels.size();
-            if (freeSize > 0) {
-                channel = freeChannels.remove(0);
-                freeSize--;
-            }
             //简单处理：如果可用连接数低于核心数则直接新增扩容核心数量连接
             if (freeSize <= natClient.getPoolCoreSize()) {
                 for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
@@ -107,8 +107,14 @@ public class ProxyChannelSource {
                 }
                 controlChannel.flush();
             }
-            debug();
-            return channel;
+
+            try {
+                Channel channel = freeChannels.take();
+                debug();
+                return channel;
+            } catch (InterruptedException e) {
+                throw new RuntimeException("freeChannels take error", e);
+            }
         }
     }
 }

@@ -36,8 +36,6 @@ public class ClientTargetHandler extends SimpleChannelInboundHandler<ByteBuf> {
     public void channelInactive(ChannelHandlerContext ctx) {
         Channel targetChannel = ctx.channel();
         log.debug("ClientTargetHandler channelInactive: {}", targetChannel);
-        log.debug("Closing  proxy channel: {}", proxyChannel);
-        proxyChannel.close();
     }
 
     @Override

@@ -10,8 +10,10 @@ nat:
   clientId: entdiy
   clientSecret: entdiy123
 
-  serverAddr: 127.0.0.1
-  port: 4443
+  serverAddr: entdiy.com
+  port: 5555
+  #serverAddr: 127.0.0.1
+  #port: 4443
   # 穿透通道定义模式：
   # client = 客户端本地tunnels配置为准，忽略server端配置
   # server = server端定义为准，忽略本地tunnels配置

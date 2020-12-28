@@ -62,6 +62,8 @@ public class ClientControlHandler extends NatCommonHandler {
 
     private String clientToken;
 
+    private final static Integer MIN_POOL_SIZE = 10;
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         log.debug("ClientControlHandler channelActive: {}", ctx.channel());
@@ -130,18 +132,18 @@ public class ClientControlHandler extends NatCommonHandler {
                             clientToken = reqBody.getClientToken();
 
                             List<Tunnel> tunnels = Lists.newArrayList();
-                            Map<String,Tunnel> configTunnels= config.getTunnels();
-                            if( TunnelsModeEnum.server.equals(config.getTunnelsMode())){
-                               configTunnels=reqBody.getTunnels();
+                            Map<String, Tunnel> configTunnels = config.getTunnels();
+                            if (TunnelsModeEnum.server.equals(config.getTunnelsMode())) {
+                                configTunnels = reqBody.getTunnels();
                             }
-                            if(configTunnels!=null && configTunnels.size()>0){
-                                for(Map.Entry<String,Tunnel> me:configTunnels.entrySet()){
-                                    Tunnel tunnel=me.getValue();
+                            if (configTunnels != null && configTunnels.size() > 0) {
+                                for (Map.Entry<String, Tunnel> me : configTunnels.entrySet()) {
+                                    Tunnel tunnel = me.getValue();
                                     tunnel.setCode(me.getKey());
                                     tunnels.add(tunnel);
                                 }
                             }
-                            Assert.isTrue(tunnels.size()>0,"Tunnels can't be empty");
+                            Assert.isTrue(tunnels.size() > 0, "Tunnels can't be empty");
 
                             for (Tunnel tunnel : tunnels) {
                                 try {
@@ -172,8 +174,8 @@ public class ClientControlHandler extends NatCommonHandler {
 
                             InitProxyMessage initProxyMessage = new InitProxyMessage();
                             initProxyMessage.setClientToken(clientToken);
-                            initProxyMessage.setCoreSize(config.getPoolCoreSize() != null && config.getPoolCoreSize() > 0 ? config.getPoolCoreSize() : tunnels.size());
-                            initProxyMessage.setIdleSize(config.getPoolIdleSize() != null && config.getPoolIdleSize() > 0 ? config.getPoolIdleSize() : tunnels.size());
+                            initProxyMessage.setCoreSize(config.getPoolCoreSize() != null && config.getPoolCoreSize() > MIN_POOL_SIZE ? config.getPoolCoreSize() : MIN_POOL_SIZE);
+                            initProxyMessage.setIdleSize(config.getPoolIdleSize() != null && config.getPoolIdleSize() > MIN_POOL_SIZE ? config.getPoolIdleSize() : MIN_POOL_SIZE);
                             initProxyMessage.setMaxSize(config.getPoolMaxSize() != null && config.getPoolMaxSize() > 0 ? config.getPoolMaxSize() : 1000);
                             NatMessage message = NatMessage.build();
                             byte[] content = JsonUtil.serialize(initProxyMessage).getBytes();
