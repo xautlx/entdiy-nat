@@ -17,7 +17,7 @@ nat:
   # 穿透通道定义模式：
   # client = 客户端本地tunnels配置为准，忽略server端配置
   # server = server端定义为准，忽略本地tunnels配置
-  tunnelsMode: "client"
+  tunnelsMode: client
   tunnels:
     mock:
       host: 127.0.0.1

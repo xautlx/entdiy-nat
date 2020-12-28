@@ -158,7 +158,7 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <configuration>
-                        <!-- 基于maven-jar-plugin输出微服务jar文件进行二次spring boot重新打包文件的输出目录 -->
+                        <!-- 子模块项目重定义属性值，spring boot打包jar输出至devops对应目录-->
                         <outputDirectory>${jar-output-dir}</outputDirectory>
                     </configuration>
                     <executions>
