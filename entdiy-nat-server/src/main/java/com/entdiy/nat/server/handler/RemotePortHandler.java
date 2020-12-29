@@ -82,12 +82,13 @@ public class RemotePortHandler extends NatCommonHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        log.debug("Read public message from external...");
+        Channel remoteChannel = ctx.channel();
+        log.debug("RemotePortHandler channelRead: {}", remoteChannel);
         if (msg == null) {
             return;
         }
 
-        String clientAddr = clientAddrPublicChannelMapping.inverse().get(ctx.channel());
+        String clientAddr = clientAddrPublicChannelMapping.inverse().get(remoteChannel);
         Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
         ByteBuf byteBuf = (ByteBuf) msg;
         log.info("Write message to proxy channel: {}, data length: {}", proxyChannel, byteBuf.readableBytes());

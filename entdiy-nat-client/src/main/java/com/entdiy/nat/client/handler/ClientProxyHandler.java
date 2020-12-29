@@ -86,7 +86,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
-        log.trace("Control read message: {}", msg);
+        log.debug("ClientProxyHandler read message: {}", msg);
         if (msg == null) {
             return;
         }

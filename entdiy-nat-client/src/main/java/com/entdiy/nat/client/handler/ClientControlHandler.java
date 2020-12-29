@@ -62,8 +62,6 @@ public class ClientControlHandler extends NatCommonHandler {
 
     private String clientToken;
 
-    private final static Integer MIN_POOL_SIZE = 10;
-
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         log.debug("ClientControlHandler channelActive: {}", ctx.channel());
@@ -174,8 +172,8 @@ public class ClientControlHandler extends NatCommonHandler {
 
                             InitProxyMessage initProxyMessage = new InitProxyMessage();
                             initProxyMessage.setClientToken(clientToken);
-                            initProxyMessage.setCoreSize(config.getPoolCoreSize() != null && config.getPoolCoreSize() > MIN_POOL_SIZE ? config.getPoolCoreSize() : MIN_POOL_SIZE);
-                            initProxyMessage.setIdleSize(config.getPoolIdleSize() != null && config.getPoolIdleSize() > MIN_POOL_SIZE ? config.getPoolIdleSize() : MIN_POOL_SIZE);
+                            initProxyMessage.setCoreSize(config.getPoolCoreSize() != null && config.getPoolCoreSize() > 0 ? config.getPoolCoreSize() : tunnels.size());
+                            initProxyMessage.setIdleSize(config.getPoolIdleSize() != null && config.getPoolIdleSize() > 0 ? config.getPoolIdleSize() : tunnels.size());
                             initProxyMessage.setMaxSize(config.getPoolMaxSize() != null && config.getPoolMaxSize() > 0 ? config.getPoolMaxSize() : 1000);
                             NatMessage message = NatMessage.build();
                             byte[] content = JsonUtil.serialize(initProxyMessage).getBytes();

@@ -13,9 +13,11 @@ WAIT_SECONDS=20
 case "$1" in
     start)
     echo Startup ${APP_NAME} ...
-    nohup java -jar -Dspring.profiles.active=prd ${BASE_DIR}/${APP_NAME}.jar > nohup.out 2>&1 &
+    rm -f ${BASE_DIR}/nohup.out
+    nohup java -jar -Dspring.profiles.active=prd ${BASE_DIR}/${APP_NAME}.jar > ${BASE_DIR}/nohup.out 2>&1 &
     echo $! > ${BASE_DIR}/${APP_NAME}.pid
     echo Application logs write to file: ${BASE_DIR}/logs/${APP_NAME}.log
+    sleep 1s
     tail -f ${BASE_DIR}/nohup.out
     ;;
     stop)
@@ -27,7 +29,7 @@ case "$1" in
       while [ $count -le 60 ]
       do
         ((count++))
-        if [ $count -eq 1 ];then
+        if [ $count -lt $WAIT_SECONDS ];then
           kill -15 $PID
         fi
         sleep 1s

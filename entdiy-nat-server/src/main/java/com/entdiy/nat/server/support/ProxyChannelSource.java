@@ -26,11 +26,12 @@ import com.entdiy.nat.server.handler.RemotePortHandler;
 import com.google.common.collect.Maps;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.util.internal.PlatformDependent;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Deque;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 @Slf4j
 public class ProxyChannelSource {
@@ -51,14 +52,19 @@ public class ProxyChannelSource {
 
     @Slf4j
     public static class ProxyChannelPool {
+        private ChannelHealthChecker healthCheck = ChannelHealthChecker.ACTIVE;
         private Channel controlChannel;
         private NatClient natClient;
-        private BlockingQueue<Channel> freeChannels = new LinkedBlockingQueue();
+        private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
             this.controlChannel = controlChannel;
             this.natClient = natClient;
-            for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
+            batchReqProxy(natClient.getPoolCoreSize());
+        }
+
+        private void batchReqProxy(int newCount) {
+            for (int i = 0; i < newCount; i++) {
                 acquireNew();
             }
             controlChannel.flush();
@@ -73,11 +79,7 @@ public class ProxyChannelSource {
             controlChannel.write(reqProxyMessage);
         }
 
-        private void debug() {
-            log.debug("Proxy channels pool free: {}", freeChannels.size());
-        }
-
-        public synchronized void add(Channel channel) {
+        public void add(Channel channel) {
             log.debug("ProxyChannelPool add: {}, {}", natClient, channel);
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
@@ -88,32 +90,33 @@ public class ProxyChannelSource {
                     publicChannel.close();
                 }
             });
-
-            try {
-                freeChannels.put(channel);
-                debug();
-            } catch (InterruptedException e) {
-                throw new RuntimeException("freeChannels put error", e);
+            synchronized (natClient) {
+                deque.offerLast(channel);
+                log.debug("Proxy channels pool free after add: {}", deque.size());
+                natClient.notify();
             }
         }
 
-        public synchronized Channel acquire() {
-            log.debug("ProxyChannelPool acquire: {}", natClient);
-            int freeSize = freeChannels.size();
-            //简单处理：如果可用连接数低于核心数则直接新增扩容核心数量连接
-            if (freeSize <= natClient.getPoolCoreSize()) {
-                for (int i = 0; i < natClient.getPoolCoreSize(); i++) {
-                    acquireNew();
+        public Channel acquire() {
+            synchronized (natClient) {
+                Channel channel = null;
+                log.debug("ProxyChannelPool acquire: {}", natClient);
+                while (true) {
+                    try {
+                        channel = deque.pollLast();
+                        if (channel != null && healthCheck.isHealthy(channel).getNow()) {
+                            break;
+                        }
+                        if (deque.size() < natClient.getPoolCoreSize()) {
+                            batchReqProxy(2);
+                            natClient.wait(5000);
+                        }
+                    } catch (InterruptedException e) {
+                        log.error("thread error", e);
+                    }
                 }
-                controlChannel.flush();
-            }
-
-            try {
-                Channel channel = freeChannels.take();
-                debug();
+                log.debug("Proxy channels pool free after acquire: {}", deque.size());
                 return channel;
-            } catch (InterruptedException e) {
-                throw new RuntimeException("freeChannels take error", e);
             }
         }
     }
