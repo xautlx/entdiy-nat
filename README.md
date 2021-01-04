@@ -1,6 +1,6 @@
 ## 项目简介
 
-类似 [Ngrok](https://github.com/inconshreveable/ngrok) ，基于Netty实现的NAT内网穿透访问软件。更多故事详见 [项目起源](STORY.md)
+类似 [Ngrok](https://github.com/inconshreveable/ngrok) ，基于Netty实现的NAT内网穿透访问软件。
 
 **entdiy-nat-common** - 公共组件类代码模块
 
@@ -106,7 +106,7 @@ ssh -p 122 root@127.0.0.1
 
 既然上面已经有类似这样的内网穿透的成熟软件，为啥又重复造个轮子呢？原因如下：
 
-* 诸如开源版本Ngrok基本都是以client端定义tunnel穿透隧道，而从上述业务背景来看，一般是需要从服务端集中管理设备穿透配置信息，
+* 诸如开源版本Ngrok基本都是以Client端定义Tunnel穿透隧道，而从上述业务背景来看，一般是需要从Server服务端集中管理设备穿透配置信息，
   以及后期业务扩展支持更多高级管理特性，有必要定制一个持续可维护的项目；
 
 * 主流开源的ngrok、frp等都是基于go语言的，作为一个Java技术栈人员，面对Netty的火热，也算是乎手痒痒造就了这个项目 :)
