@@ -126,6 +126,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                 log.error("Response Error: {}", reqBody.getError());
                                 return;
                             }
+                            log.info("Application version (client){}/(server){}", config.getVersion(), reqBody.getVersion());
                             log.debug("Get Auth ClientToken: {}", reqBody.getClientToken());
                             clientToken = reqBody.getClientToken();
 
@@ -161,9 +162,9 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 }
                                             });
                                     ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                                    log.info("Connect to tunnel channel: {}", f.channel());
+                                    log.debug("Connect to tunnel channel: {}", f.channel());
                                     f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
-                                        log.info("Disconnect to tunnel channel: {}", t.channel());
+                                        log.debug("Disconnect to tunnel channel: {}", t.channel());
                                     });
                                 } catch (InterruptedException e) {
                                     log.error("Proxy connect error", e);
@@ -200,9 +201,9 @@ public class ClientControlHandler extends NatCommonHandler {
                                             }
                                         });
                                 ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
-                                log.info("Connect to proxy channel: {}", f.channel());
+                                log.debug("Connect to proxy channel: {}", f.channel());
                                 f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
-                                    log.info("Disconnect to proxy channel: {}", t.channel());
+                                    log.debug("Disconnect to proxy channel: {}", t.channel());
                                 });
                             } catch (InterruptedException e) {
                                 log.error("Proxy connect error", e);

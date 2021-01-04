@@ -165,7 +165,7 @@ public class ServerControlHandler extends NatCommonHandler {
                         } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             InitProxyMessage bodyMessage = JsonUtil.deserialize(body, InitProxyMessage.class);
-                            log.info("InitProxy for client: {}", bodyMessage);
+                            log.debug("InitProxy for client: {}", bodyMessage);
                             NatClient natClient = new NatClient();
                             natClient.setClientToken(bodyMessage.getClientToken());
                             natClient.setPoolCoreSize(bodyMessage.getCoreSize());
@@ -175,7 +175,7 @@ public class ServerControlHandler extends NatCommonHandler {
                         } else if (messageIn.getType() == ControlMessageType.RegProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
-                            log.info("RegProxy client: {}", bodyMessage.getClientToken());
+                            log.debug("RegProxy client: {}", bodyMessage.getClientToken());
                             ProxyChannelSource.add(bodyMessage.getClientToken(), ctx.channel());
                         }
                     }
@@ -186,7 +186,7 @@ public class ServerControlHandler extends NatCommonHandler {
         } else {
             Channel publicChannel = RemotePortHandler.getPublicChannel(ctx.channel());
             ByteBuf byteBuf = (ByteBuf) msg;
-            log.info("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
+            log.debug("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
             publicChannel.writeAndFlush(byteBuf.copy());
         }
     }

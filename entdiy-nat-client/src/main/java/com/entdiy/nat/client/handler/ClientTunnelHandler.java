@@ -17,6 +17,8 @@
  */
 package com.entdiy.nat.client.handler;
 
+import com.entdiy.nat.client.ClientContext;
+import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.model.NatMessage;
@@ -43,8 +45,8 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
     private Tunnel tunnel;
     private String clientToken;
 
-    public ClientTunnelHandler(String clientToken,Tunnel tunnel) {
-        this.clientToken=clientToken;
+    public ClientTunnelHandler(String clientToken, Tunnel tunnel) {
+        this.clientToken = clientToken;
         this.tunnel = tunnel;
     }
 
@@ -60,6 +62,9 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
         if (tunnel.getRemotePort() != null) {
             bodyMessage.setRemotePort(tunnel.getRemotePort());
             bodyMessage.setProtocol(ProtocolType.TCP.name());
+        } else if (ProtocolType.TCP.name().equalsIgnoreCase(tunnel.getProto())) {
+            //TCP协议且没有指定远端端口，则取本地服务对应端口
+            bodyMessage.setRemotePort(tunnel.getPort());
         }
         //TODO HTTP处理
         byte[] bodyContent = JsonUtil.serialize(bodyMessage).getBytes();
@@ -85,10 +90,16 @@ public class ClientTunnelHandler extends ChannelInboundHandlerAdapter {
                 log.debug("Read message: {}", messageIn);
                 if (messageIn.getProtocol() == ProtocolType.CONTROL.getCode()) {
                     if (messageIn.getType() == ControlMessageType.NewTunnel.getCode()) {
+                        NatClientConfigProperties config = ClientContext.getConfig();
                         String reqBodyString = messageIn.getBodyString();
                         NewTunnelMessage reqBody = JsonUtil.deserialize(reqBodyString, NewTunnelMessage.class);
-                        urlTunnelMapping.put(reqBody.getUrl(), reqIdTunnelMapping.get(reqBody.getReqId()));
-                        log.info("New tunnel created: {}", messageIn.getBodyString());
+                        Tunnel tunnel = reqIdTunnelMapping.get(reqBody.getReqId());
+                        urlTunnelMapping.put(reqBody.getUrl(), tunnel);
+                        String uri = null;
+                        if (tunnel.getRemotePort() != null || ProtocolType.TCP.name().equalsIgnoreCase(tunnel.getProto())) {
+                            uri = ProtocolType.TCP.name() + "://" + config.getServerAddr() + ":" + (tunnel.getRemotePort() != null ? tunnel.getRemotePort() : tunnel.getPort());
+                        }
+                        log.info("Forwarding {} -> {}", uri, tunnel.getHost() + ":" + tunnel.getPort());
                     }
                 }
             } finally {
