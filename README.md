@@ -1,6 +1,6 @@
 ## 项目简介
 
-类似Ngrok，基于Netty实现的NAT内网穿透访问软件。
+类似 [Ngrok](https://github.com/inconshreveable/ngrok) ，基于Netty实现的NAT内网穿透访问软件。
 
 **entdiy-nat-common** - 公共组件类代码模块
 
