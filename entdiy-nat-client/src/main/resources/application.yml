@@ -8,7 +8,7 @@ spring:
   application:
     name: entdiy-nat-client
   profiles:
-    include: client
+    include: client,local
     active: dev
 logging:
   config: classpath:logback-spring-prd.xml

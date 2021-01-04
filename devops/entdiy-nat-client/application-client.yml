@@ -9,17 +9,24 @@ logging:
 nat:
   clientId: entdiy
   clientSecret: entdiy123
-
-  serverAddr: entdiy.com
-  port: 5555
-  #serverAddr: 127.0.0.1
-  #port: 4443
+  # NAT Server端的公网IP地址或域名
+  serverAddr: 127.0.0.1
+  # NAT Server端穿透服务端口，对应于server端配置的nat.tunnelAddr
+  port: 4443
   # 穿透通道定义模式：
   # client = 客户端本地tunnels配置为准，忽略server端配置
   # server = server端定义为准，忽略本地tunnels配置
   tunnelsMode: client
   tunnels:
-    mock:
+    ssh:
+      # 可根据实际情况修改为局域网内服务所在主机IP
       host: 127.0.0.1
       port: 22
-      remotePort: 2222
+      # 服务端穿透访问入口端口
+      remotePort: 122
+    mysql:
+      # 可根据实际情况修改为局域网内服务所在主机IP
+      host: 127.0.0.1
+      port: 3306
+      # 服务端穿透访问入口端口
+      remotePort: 13306

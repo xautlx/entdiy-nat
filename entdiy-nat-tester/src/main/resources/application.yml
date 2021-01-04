@@ -2,3 +2,5 @@ server:
   port: 0
   servlet:
     context-path: /tester
+nat:
+  port: 8888

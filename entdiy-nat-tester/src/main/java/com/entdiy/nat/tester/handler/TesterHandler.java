@@ -26,13 +26,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TesterHandler extends NatCommonHandler {
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         log.debug("Handler channelActive: {}", ctx.channel());
-        ctx.writeAndFlush("OK");
+        ctx.writeAndFlush("Tester OK");
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf byteBuf = (ByteBuf) msg;
         log.info("Write tester message to channel: {}, data length: {}", ctx.channel(), byteBuf.readableBytes());
         ctx.channel().writeAndFlush(byteBuf.copy());

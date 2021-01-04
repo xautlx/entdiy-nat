@@ -22,19 +22,19 @@ nat:
     ssh-test:
       host: 127.0.0.1
       port: 22
-      remotePort: 2222
+      remotePort: 122
     hik-test:
       host: 25.30.14.64
       port: 8000
-      remotePort: 18070
-    hik-001-001:
+      remotePort: 18000
+    mysql:
       host: 127.0.0.1
       port: 3306
-      remotePort: 18075
-    hik-001-002:
+      remotePort: 13306
+    redis:
       host: 127.0.0.1
       port: 6379
-      remotePort: 18074
+      remotePort: 16379
     tester:
       host: 127.0.0.1
       port: 8888

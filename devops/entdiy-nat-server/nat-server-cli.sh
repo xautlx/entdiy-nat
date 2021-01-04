@@ -14,7 +14,9 @@ case "$1" in
     start)
     echo Startup ${APP_NAME} ...
     rm -f ${BASE_DIR}/nohup.out
+    cd ${BASE_DIR}
     nohup java -jar -Dspring.profiles.active=prd ${BASE_DIR}/${APP_NAME}.jar > ${BASE_DIR}/nohup.out 2>&1 &
+    cd ${CUR_DIR}
     echo $! > ${BASE_DIR}/${APP_NAME}.pid
     echo Application logs write to file: ${BASE_DIR}/logs/${APP_NAME}.log
     sleep 1s

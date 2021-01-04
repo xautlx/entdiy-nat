@@ -8,6 +8,11 @@ logging:
     root: INFO
 nat:
   domain: 127.0.0.1
+  # 提供HTTP穿透的服务端端口
+  # 如果默认80端口已经被Nginx等占用，可修改为其他端口，然后在Nginx配置proxy_pass反向代理httpAddr端口服务
   httpAddr: 80
+  # 提供HTTPS穿透的服务端端口
+  # 如果默认443端口已经被Nginx等占用，可修改为其他端口，然后在Nginx配置proxy_pass反向代理httpsAddr端口服务
   httpsAddr: 443
+  # 供NAT客户端穿透访问的主服务端口，如果端口占用需要修改请注意保持server和client端同步修改
   tunnelAddr: 4443

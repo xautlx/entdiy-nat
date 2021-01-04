@@ -2,3 +2,4 @@ nohup.out
 logs
 entdiy-nat-server.jar
 entdiy-nat-server.pid
+application-local.yml
