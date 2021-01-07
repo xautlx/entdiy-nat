@@ -185,9 +185,13 @@ public class ServerControlHandler extends NatCommonHandler {
             }
         } else {
             Channel publicChannel = RemotePortHandler.getPublicChannel(ctx.channel());
-            ByteBuf byteBuf = (ByteBuf) msg;
-            log.debug("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
-            publicChannel.writeAndFlush(byteBuf.copy());
+            if (publicChannel != null) {
+                ByteBuf byteBuf = (ByteBuf) msg;
+                log.debug("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
+                publicChannel.writeAndFlush(byteBuf);
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 }

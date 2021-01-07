@@ -32,6 +32,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class ProxyChannelSource {
@@ -55,6 +58,8 @@ public class ProxyChannelSource {
         private ChannelHealthChecker healthCheck = ChannelHealthChecker.ACTIVE;
         private Channel controlChannel;
         private NatClient natClient;
+        private volatile CountDownLatch countDownLatch = null;
+        private AtomicInteger count = new AtomicInteger();
         private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
@@ -90,34 +95,41 @@ public class ProxyChannelSource {
                     publicChannel.close();
                 }
             });
-            synchronized (natClient) {
-                deque.offerLast(channel);
-                log.debug("Proxy channels pool free after add: {}", deque.size());
-                natClient.notify();
+            deque.offerLast(channel);
+            if (countDownLatch != null) {
+                countDownLatch.countDown();
             }
+            log.debug("Proxy channels pool free after add: {}", deque.size());
         }
 
         public Channel acquire() {
-            synchronized (natClient) {
-                Channel channel = null;
-                log.debug("ProxyChannelPool acquire: {}", natClient);
-                while (true) {
-                    try {
-                        channel = deque.pollLast();
-                        if (channel != null && healthCheck.isHealthy(channel).getNow()) {
-                            break;
-                        }
-                        if (deque.size() < natClient.getPoolCoreSize()) {
-                            batchReqProxy(2);
-                            natClient.wait(5000);
-                        }
-                    } catch (InterruptedException e) {
-                        log.error("thread error", e);
+            Channel channel = null;
+            log.debug("ProxyChannelPool acquire: {}", natClient);
+            do {
+                channel = deque.pollLast();
+                synchronized (natClient) {
+                    if (countDownLatch == null && deque.size() < natClient.getPoolCoreSize()) {
+                        log.debug("Acquiring times: {}", count.incrementAndGet());
+                        int size = natClient.getPoolCoreSize();
+                        countDownLatch = new CountDownLatch(size);
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    batchReqProxy(size);
+                                    countDownLatch.await(5, TimeUnit.SECONDS);
+                                    countDownLatch = null;
+                                } catch (InterruptedException e) {
+                                    log.error("thread error", e);
+                                }
+                            }
+                        }).start();
                     }
                 }
-                log.debug("Proxy channels pool free after acquire: {}", deque.size());
-                return channel;
-            }
+            } while (channel == null || !healthCheck.isHealthy(channel).getNow());
+            log.debug("Proxy channels pool free after acquire: {}", deque.size());
+            return channel;
+
         }
     }
 }

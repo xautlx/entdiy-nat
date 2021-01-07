@@ -18,7 +18,7 @@
 package com.entdiy.nat.server;
 
 import com.entdiy.nat.server.config.NatServerConfigProperties;
-import com.entdiy.nat.server.listener.NatServerListener;
+import com.entdiy.nat.server.listener.NatControlListener;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -37,7 +37,7 @@ public class NatServerApplication implements ApplicationContextAware {
     @Autowired
     private NatServerConfigProperties config;
 
-    private NatServerListener natServerListener = new NatServerListener();
+    private NatControlListener natControlListener = new NatControlListener();
 
     public static void main(String[] args) {
         SpringApplication.run(NatServerApplication.class, args);
@@ -46,12 +46,12 @@ public class NatServerApplication implements ApplicationContextAware {
     @PostConstruct
     public void init() {
         ServerContext.setConfig(config);
-        natServerListener.run();
+        natControlListener.run();
     }
 
     @PreDestroy
     public void shutdown() {
-        natServerListener.shutdown();
+        natControlListener.shutdown();
     }
 
     @Override

@@ -35,7 +35,12 @@ nat:
       host: 127.0.0.1
       port: 6379
       remotePort: 16379
-    tester:
+    tester-tcp:
       host: 127.0.0.1
       port: 8888
-      remotePort: 18073
+      remotePort: 18888
+    tester-http:
+      proto: http
+      host: 127.0.0.1
+      port: 8088
+      remotePort: 18088

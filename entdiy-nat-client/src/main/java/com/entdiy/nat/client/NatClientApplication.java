@@ -18,21 +18,24 @@
 package com.entdiy.nat.client;
 
 import com.entdiy.nat.client.config.NatClientConfigProperties;
+import com.entdiy.nat.client.constant.TunnelsModeEnum;
 import com.entdiy.nat.client.listener.NatClientListener;
-import org.springframework.beans.BeansException;
+import com.entdiy.nat.common.model.Tunnel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.util.Assert;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.util.Map;
 
 @SpringBootApplication
 @EnableConfigurationProperties(NatClientConfigProperties.class)
-public class NatClientApplication implements ApplicationContextAware {
+@Slf4j
+public class NatClientApplication {
 
     @Autowired
     private NatClientConfigProperties config;
@@ -47,16 +50,16 @@ public class NatClientApplication implements ApplicationContextAware {
     @PostConstruct
     public void init() {
         ClientContext.setConfig(config);
+        log.info("Running at {} TunnelsMode", config.getTunnelsMode());
+        if (!TunnelsModeEnum.server.equals(config.getTunnelsMode())) {
+            Map<String, Tunnel> tunnels = config.getTunnels();
+            Assert.isTrue(tunnels != null && tunnels.size() > 0, "nat.tunnels config required");
+        }
         natClientListener.run();
     }
 
     @PreDestroy
     public void shutdown() {
         natClientListener.shutdown();
-    }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        //ContextUtil.setApplicationContext(applicationContext);
     }
 }

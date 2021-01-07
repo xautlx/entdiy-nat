@@ -117,7 +117,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                             p.addLast(new ClientTargetHandler(proxyChannel));
                                         }
                                     });
-                            Tunnel tunnel = ClientTunnelHandler.getByUrl(reqBody.getUrl());
+                            Tunnel tunnel = ClientControlHandler.getByUrl(reqBody.getUrl());
                             ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
                             if (f.isSuccess()) {
                                 Channel targetChannel = f.channel();

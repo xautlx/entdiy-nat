@@ -36,7 +36,7 @@ import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NatServerListener extends NatCommonListener {
+public class NatControlListener extends NatCommonListener {
 
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workGroup = new NioEventLoopGroup();
