@@ -30,10 +30,9 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.internal.PlatformDependent;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.Deque;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -58,8 +57,9 @@ public class ProxyChannelSource {
         private ChannelHealthChecker healthCheck = ChannelHealthChecker.ACTIVE;
         private Channel controlChannel;
         private NatClient natClient;
-        private volatile CountDownLatch countDownLatch = null;
-        private AtomicInteger count = new AtomicInteger();
+        private volatile LocalDateTime lastBatchReqProxyTime = null;
+        private volatile AtomicInteger acquiringCount = new AtomicInteger();
+        private volatile AtomicInteger count = new AtomicInteger();
         private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
@@ -69,6 +69,8 @@ public class ProxyChannelSource {
         }
 
         private void batchReqProxy(int newCount) {
+            lastBatchReqProxyTime = LocalDateTime.now();
+            log.debug("BatchReqProxy times: {}", count.incrementAndGet());
             for (int i = 0; i < newCount; i++) {
                 acquireNew();
             }
@@ -86,50 +88,43 @@ public class ProxyChannelSource {
 
         public void add(Channel channel) {
             log.debug("ProxyChannelPool add: {}, {}", natClient, channel);
+            deque.offerLast(channel);
+            log.debug("Proxy channels pool free after add: {}", deque.size());
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
                 log.info("Disconnect to proxy channel: {}", closeProxyChannel);
-                Channel publicChannel = RemotePortHandler.getPublicChannel(closeProxyChannel);
-                if (publicChannel != null) {
-                    log.info("Closing public channel: {}", publicChannel);
-                    publicChannel.close();
+                Channel remoteChannel = RemotePortHandler.removeChannelMapping(closeProxyChannel);
+                if (remoteChannel != null) {
+                    log.info("Closing remote channel: {}", remoteChannel);
+                    remoteChannel.close();
                 }
             });
-            deque.offerLast(channel);
-            if (countDownLatch != null) {
-                countDownLatch.countDown();
-            }
-            log.debug("Proxy channels pool free after add: {}", deque.size());
+
         }
 
         public Channel acquire() {
-            Channel channel = null;
-            log.debug("ProxyChannelPool acquire: {}", natClient);
-            do {
-                channel = deque.pollLast();
-                synchronized (natClient) {
-                    if (countDownLatch == null && deque.size() < natClient.getPoolCoreSize()) {
-                        log.debug("Acquiring times: {}", count.incrementAndGet());
-                        int size = natClient.getPoolCoreSize();
-                        countDownLatch = new CountDownLatch(size);
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    batchReqProxy(size);
-                                    countDownLatch.await(5, TimeUnit.SECONDS);
-                                    countDownLatch = null;
-                                } catch (InterruptedException e) {
-                                    log.error("thread error", e);
-                                }
-                            }
-                        }).start();
+            int size = natClient.getPoolCoreSize();
+            Channel validChannel = null;
+            while (validChannel == null) {
+                Channel channel = deque.pollLast();
+                if (channel == null) {
+                    try {
+                        batchReqProxy(1);
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        log.error("thread error", e);
                     }
+                } else if (healthCheck.isHealthy(channel).getNow()) {
+                    validChannel = channel;
                 }
-            } while (channel == null || !healthCheck.isHealthy(channel).getNow());
-            log.debug("Proxy channels pool free after acquire: {}", deque.size());
-            return channel;
+            }
 
+            if (deque.size() < size
+                    && (lastBatchReqProxyTime == null || lastBatchReqProxyTime.plusMinutes(1).isBefore(LocalDateTime.now()))) {
+                batchReqProxy(size);
+            }
+            log.debug("Proxy channels pool free after acquire: {}", deque.size());
+            return validChannel;
         }
     }
 }

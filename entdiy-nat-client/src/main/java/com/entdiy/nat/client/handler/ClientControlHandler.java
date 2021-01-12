@@ -22,6 +22,7 @@ import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.client.constant.TunnelsModeEnum;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
+import com.entdiy.nat.common.constant.Constant;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.handler.NatCommonHandler;
@@ -30,11 +31,13 @@ import com.entdiy.nat.common.model.AuthRespMessage;
 import com.entdiy.nat.common.model.InitProxyMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.NewTunnelMessage;
+import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.google.common.collect.Lists;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,9 +47,11 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
@@ -91,6 +96,12 @@ public class ClientControlHandler extends NatCommonHandler {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        Channel controlChannel = ctx.channel();
+        log.debug("ClientControlHandler channelInactive: {}", controlChannel);
+    }
+
+    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object obj) {
         NatClientConfigProperties config = ClientContext.getConfig();
         if (Boolean.FALSE.equals(config.getIdlePingEnabled())) {
@@ -117,8 +128,9 @@ public class ClientControlHandler extends NatCommonHandler {
             return;
         }
 
-        if (msg instanceof NatMessage) {
-            try {
+        try {
+            if (msg instanceof NatMessage) {
+
                 NatMessage messageIn = (NatMessage) msg;
                 //优先处理Ping消息，高频反复调用，只做少量日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Pong.getCode()) {
@@ -207,6 +219,8 @@ public class ClientControlHandler extends NatCommonHandler {
                             }
                             log.info("Forwarding {} -> {}", uri, tunnel.getHost() + ":" + tunnel.getPort());
                         } else if (messageIn.getType() == ControlMessageType.ReqProxy.getCode()) {
+                            String reqBodyString = messageIn.getBodyString();
+                            ReqProxyMessage reqBody = JsonUtil.deserialize(reqBodyString, ReqProxyMessage.class);
                             try {
                                 Bootstrap b = new Bootstrap();
                                 b.group(group)
@@ -218,6 +232,8 @@ public class ClientControlHandler extends NatCommonHandler {
                                             protected void initChannel(SocketChannel ch) throws SSLException {
                                                 ChannelPipeline p = ch.pipeline();
                                                 p.addLast(new LoggingHandler());
+                                                p.addLast(new IdleStateHandler(20, 30, 40));
+                                                p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));
@@ -234,11 +250,11 @@ public class ClientControlHandler extends NatCommonHandler {
                         }
                     }
                 }
-            } finally {
-                ReferenceCountUtil.release(msg);
+            } else {
+                throw new UnsupportedOperationException("Invalid message type");
             }
-        } else {
-            throw new UnsupportedOperationException("Invalid message type");
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
     }
 

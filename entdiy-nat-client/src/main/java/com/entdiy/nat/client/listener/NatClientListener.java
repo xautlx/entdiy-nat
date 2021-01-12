@@ -22,6 +22,7 @@ import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.client.handler.ClientControlHandler;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
+import com.entdiy.nat.common.constant.Constant;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -30,6 +31,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -56,8 +58,9 @@ public class NatClientListener {
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
                             //    p.addLast(sslCtx.newHandler(ch.alloc()));
-                            p.addLast(new IdleStateHandler(60, 80, 120));
                             p.addLast(new LoggingHandler());
+                            p.addLast(new IdleStateHandler(60, 80, 120));
+                            p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ClientControlHandler());

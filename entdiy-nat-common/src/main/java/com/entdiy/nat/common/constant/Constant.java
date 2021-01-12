@@ -1,5 +1,5 @@
 /**
- * Copyright @ 2020-2020 EntDIY-NAT (like Ngrok) based on Netty
+ * Copyright @ 2020-2020 EntDIY NAT (like Ngrok) based on Netty
  *
  * Author: Li Xia, E-Mail: xautlx@hotmail.com
  *
@@ -15,8 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.entdiy.nat.common.adapter;
+package com.entdiy.nat.common.constant;
 
-public interface HandlerDestory {
-	void destory();
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
+
+public class Constant {
+    public final static byte[] DELIMITER_BYTES = new byte[]{'\t', 'n', 'a', 't', '\t'};
+    public final static ByteBuf DELIMITER = Unpooled.copiedBuffer(DELIMITER_BYTES);
 }

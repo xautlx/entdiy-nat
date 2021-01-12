@@ -17,6 +17,7 @@
  */
 package com.entdiy.nat.common.codec;
 
+import com.entdiy.nat.common.constant.Constant;
 import com.entdiy.nat.common.model.NatMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,6 +35,6 @@ public class NatMessageEncoder extends MessageToByteEncoder<NatMessage> {
         out.writeByte(msg.getProtocol());
         out.writeByte(msg.getType());
         out.writeBytes(msg.getBody());
+        out.writeBytes(Constant.DELIMITER_BYTES);
     }
-
 }

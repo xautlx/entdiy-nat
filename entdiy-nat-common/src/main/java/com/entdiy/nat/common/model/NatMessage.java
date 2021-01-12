@@ -27,7 +27,7 @@ import lombok.ToString;
 
 import java.util.Arrays;
 
-@ToString(callSuper=true)
+@ToString
 public class NatMessage {
 
     private NatMessage() {

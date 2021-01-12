@@ -19,9 +19,13 @@ package com.entdiy.nat.client.handler;
 
 import com.entdiy.nat.client.ClientContext;
 import com.entdiy.nat.client.config.NatClientConfigProperties;
+import com.entdiy.nat.common.codec.NatHttpRequestEncoder;
+import com.entdiy.nat.common.codec.NatMessageDecoder;
+import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
 import com.entdiy.nat.common.constant.ProxyMessageType;
+import com.entdiy.nat.common.handler.NatCommonHandler;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.RegProxyMessage;
 import com.entdiy.nat.common.model.StartProxyMessage;
@@ -31,10 +35,11 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -47,13 +52,16 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
+public class ClientProxyHandler extends NatCommonHandler {
 
     private String clientToken;
     private static NioEventLoopGroup group = new NioEventLoopGroup();
 
     private BiMap<Channel, Channel> targetProxyChannelMapping = HashBiMap.create();
     private BiMap<String, Channel> urlChannelMapping = HashBiMap.create();
+
+    private NatHttpRequestEncoder requestEncoder = new NatHttpRequestEncoder();
+
 
     public ClientProxyHandler(String clientToken) {
         this.clientToken = clientToken;
@@ -85,14 +93,14 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         log.debug("ClientProxyHandler read message: {}", msg);
         if (msg == null) {
             return;
         }
 
-        if (msg instanceof NatMessage) {
-            try {
+        try {
+            if (msg instanceof NatMessage) {
                 NatMessage messageIn = (NatMessage) msg;
                 log.debug("Read message: {}", messageIn);
                 if (messageIn.getProtocol() == ProtocolType.PROXY.getCode()) {
@@ -103,6 +111,7 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
 
                         Channel proxyChannel = ctx.channel();
                         try {
+                            Tunnel tunnel = ClientControlHandler.getByUrl(reqBody.getUrl());
                             Bootstrap b = new Bootstrap();
                             b.group(group)
                                     .channel(NioSocketChannel.class)
@@ -114,15 +123,30 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                                             ChannelPipeline p = ch.pipeline();
                                             p.addLast(new LoggingHandler());
                                             p.addLast(new IdleStateHandler(60, 80, 120));
-                                            p.addLast(new ClientTargetHandler(proxyChannel));
+                                            p.addLast(new NatMessageDecoder());
+                                            p.addLast(new NatMessageEncoder());
+
+                                            if (ProtocolType.HTTP.name().equalsIgnoreCase(tunnel.getProto())) {
+                                                p.addLast(new TargetHttpHandler(proxyChannel));
+                                            } else {
+                                                p.addLast(new TargetTcpHandler(proxyChannel));
+                                            }
                                         }
                                     });
-                            Tunnel tunnel = ClientControlHandler.getByUrl(reqBody.getUrl());
+
                             ChannelFuture f = b.connect(tunnel.getHost(), tunnel.getPort()).sync();
                             if (f.isSuccess()) {
                                 Channel targetChannel = f.channel();
                                 targetProxyChannelMapping.put(proxyChannel, targetChannel);
                                 log.info("Connect to target channel: {} ", targetChannel);
+                                targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
+                                    Channel closeTargetChannel = t.channel();
+                                    log.info("Disconnect to target channel: {}", closeTargetChannel);
+                                    Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
+                                    targetProxyChannelMapping.remove(closeProxyChannel);
+                                    log.info("Close proxy channel: {}", closeProxyChannel);
+                                    closeProxyChannel.close();
+                                });
                             } else {
                                 proxyChannel.close();
                             }
@@ -131,15 +155,20 @@ public class ClientProxyHandler extends ChannelInboundHandlerAdapter {
                             proxyChannel.close();
                         }
                     }
+                } else if (messageIn.getProtocol() == ProtocolType.TCP.getCode()) {
+                    ByteBuf byteBuf = Unpooled.wrappedBuffer(messageIn.getBody());
+                    Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
+                    log.info("Write TCP message to target channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
+                    targetChannel.writeAndFlush(byteBuf.copy());
+                } else if (messageIn.getProtocol() == ProtocolType.HTTP.getCode()) {
+                    ByteBuf byteBuf = Unpooled.wrappedBuffer(messageIn.getBody());
+                    Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
+                    log.info("Write HTTP message to target channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
+                    targetChannel.writeAndFlush(byteBuf.copy());
                 }
-            } finally {
-                ReferenceCountUtil.release(msg);
             }
-        } else {
-            ByteBuf byteBuf = (ByteBuf) msg;
-            Channel targetChannel = targetProxyChannelMapping.get(ctx.channel());
-            log.info("Write message to target channel: {}, data length: {}", targetChannel, byteBuf.readableBytes());
-            targetChannel.writeAndFlush(byteBuf.copy());
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
     }
 }

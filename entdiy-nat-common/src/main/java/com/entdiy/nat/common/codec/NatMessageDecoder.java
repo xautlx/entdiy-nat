@@ -32,30 +32,25 @@ public class NatMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List out) {
         int readableBytes = in.readableBytes();
         log.trace("Decode message for channel: {}, bytes size: {}", ctx.channel(), readableBytes);
-        boolean netMessageRead = true;
-        while (netMessageRead && in.readerIndex() < readableBytes) {
-            int crcCode = readableBytes > 8 ? in.readInt() : -1;
-            if (crcCode == NatMessage.CRC_CODE) {
-                netMessageRead = true;
-                NatMessage message = NatMessage.build();
-                int length = in.readInt();
-                message.setLength(length);
-                byte protocol = in.readByte();
-                message.setProtocol(protocol);
-                byte type = in.readByte();
-                message.setType(type);
-                byte[] body = new byte[length];
-                in.readBytes(body);
-                message.setBody(body);
-                out.add(message);
-                log.trace("Decode to message: {}", message);
-            } else {
-                netMessageRead = false;
-                in.resetReaderIndex();
-                in.retain();
-                out.add(in);
-                log.trace("Decode retain message directly");
-            }
+        int crcCode = readableBytes > 4 ? in.readInt() : -1;
+        if (crcCode == NatMessage.CRC_CODE) {
+            NatMessage message = NatMessage.build();
+            int length = in.readInt();
+            message.setLength(length);
+            byte protocol = in.readByte();
+            message.setProtocol(protocol);
+            byte type = in.readByte();
+            message.setType(type);
+            byte[] body = new byte[length];
+            in.readBytes(body);
+            message.setBody(body);
+            out.add(message);
+            log.trace("Decode to message: {}", message);
+        } else {
+            in.resetReaderIndex();
+            in.retain();
+            out.add(in);
+            log.trace("Decode retain message directly");
         }
     }
 }

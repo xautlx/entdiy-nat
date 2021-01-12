@@ -23,13 +23,20 @@ import com.entdiy.nat.common.handler.NatCommonHandler;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.StartProxyMessage;
 import com.entdiy.nat.common.util.JsonUtil;
+import com.entdiy.nat.server.codec.NatHttpRequestEncoder;
 import com.entdiy.nat.server.support.ProxyChannelSource;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
 
 
 @Slf4j
@@ -39,8 +46,9 @@ public class RemotePortHandler extends NatCommonHandler {
     private String clientToken;
     private String url;
 
-    private static BiMap<String, Channel> clientAddrPublicChannelMapping = HashBiMap.create();
-    private static BiMap<String, Channel> clientAddrProxyChannelMapping = HashBiMap.create();
+    private static BiMap<Channel, Channel> remoteChannelToProxyChannelMapping = HashBiMap.create();
+
+    private NatHttpRequestEncoder requestEncoder = new NatHttpRequestEncoder();
 
     public RemotePortHandler(String clientToken, String url) {
         this.clientToken = clientToken;
@@ -52,10 +60,9 @@ public class RemotePortHandler extends NatCommonHandler {
         Channel remoteChannel = ctx.channel();
         String clientAddr = remoteChannel.remoteAddress().toString();
         log.debug("RemotePortHandler channelActive: {}", remoteChannel);
-        clientAddrPublicChannelMapping.put(clientAddr, remoteChannel);
-
         Channel proxyChannel = ProxyChannelSource.acquire(clientToken);
-        clientAddrProxyChannelMapping.put(clientAddr, proxyChannel);
+        remoteChannelToProxyChannelMapping.put(remoteChannel, proxyChannel);
+
         StartProxyMessage respBody = new StartProxyMessage();
         respBody.setUrl(url);
         respBody.setClientAddr(clientAddr);
@@ -72,11 +79,11 @@ public class RemotePortHandler extends NatCommonHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel remoteChannel = ctx.channel();
         log.debug("RemotePortHandler channelInactive: {}", remoteChannel);
-        String clientAddr = clientAddrPublicChannelMapping.inverse().get(remoteChannel);
-        Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
-        clientAddrProxyChannelMapping.remove(clientAddr);
-        clientAddrPublicChannelMapping.remove(clientAddr);
-        proxyChannel.close();
+        Channel proxyChannel = remoteChannelToProxyChannelMapping.get(remoteChannel);
+        if (proxyChannel != null) {
+            log.debug("Closing proxy channel: {}", proxyChannel);
+            proxyChannel.close();
+        }
     }
 
 
@@ -88,15 +95,41 @@ public class RemotePortHandler extends NatCommonHandler {
             return;
         }
 
-        String clientAddr = clientAddrPublicChannelMapping.inverse().get(remoteChannel);
-        Channel proxyChannel = clientAddrProxyChannelMapping.get(clientAddr);
-        ByteBuf byteBuf = (ByteBuf) msg;
-        log.info("Write message to proxy channel: {}, data length: {}", proxyChannel, byteBuf.readableBytes());
-        proxyChannel.writeAndFlush(msg);
+        try {
+            Channel proxyChannel = remoteChannelToProxyChannelMapping.get(remoteChannel);
+            if (proxyChannel == null) {
+                remoteChannel.close();
+                return;
+            }
+            NatMessage natMessage = NatMessage.build();
+            natMessage.setType(ProxyMessageType.Proxy.getCode());
+            if (msg instanceof FullHttpRequest) {
+                List<Object> out = Lists.newArrayList();
+                requestEncoder.encode(ctx, msg, out);
+                ByteBuf outByteBuf = (ByteBuf) out.get(0);
+                natMessage.setProtocol(ProtocolType.HTTP.getCode());
+                natMessage.setBody(ByteBufUtil.getBytes(outByteBuf));
+                log.debug("Write HTTP message to proxy channel: {}, data size: {}", proxyChannel, outByteBuf.readableBytes());
+                proxyChannel.writeAndFlush(natMessage);
+            } else if (msg instanceof ByteBuf) {
+                ByteBuf outByteBuf = (ByteBuf) msg;
+                natMessage.setProtocol(ProtocolType.TCP.getCode());
+                natMessage.setBody(ByteBufUtil.getBytes(outByteBuf));
+                log.debug("Write TCP message to proxy channel: {}, data size: {}", proxyChannel, outByteBuf.readableBytes());
+                proxyChannel.writeAndFlush(natMessage);
+            }
+        } finally {
+            ReferenceCountUtil.release(msg);
+        }
     }
 
-    public static Channel getPublicChannel(Channel proxyChannel) {
-        String clientAddr = clientAddrProxyChannelMapping.inverse().get(proxyChannel);
-        return clientAddrPublicChannelMapping.get(clientAddr);
+    public static Channel getRemoteChannel(Channel proxyChannel) {
+        return remoteChannelToProxyChannelMapping.inverse().get(proxyChannel);
+    }
+
+    public static Channel removeChannelMapping(Channel proxyChannel) {
+        Channel remoteChannel = getRemoteChannel(proxyChannel);
+        remoteChannelToProxyChannelMapping.remove(remoteChannel);
+        return remoteChannel;
     }
 }

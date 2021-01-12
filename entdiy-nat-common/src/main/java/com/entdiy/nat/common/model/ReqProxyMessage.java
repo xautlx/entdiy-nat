@@ -23,5 +23,5 @@ import lombok.ToString;
 @Data
 @ToString(callSuper=true)
 public class ReqProxyMessage extends BaseRequestMessage{
-
+    private String protocol;
 }

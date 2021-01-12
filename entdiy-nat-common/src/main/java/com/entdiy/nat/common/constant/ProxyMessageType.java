@@ -20,8 +20,9 @@ package com.entdiy.nat.common.constant;
 
 public enum ProxyMessageType {
 
-    StartProxy(Byte.valueOf("7")),
-    RemoteProxy(Byte.valueOf("8"));
+    StartProxy(Byte.valueOf("10")),
+    Proxy(Byte.valueOf("20")),
+    ProxyResp(Byte.valueOf("30"));
 
     private byte code;
 

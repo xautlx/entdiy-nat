@@ -20,6 +20,7 @@ package com.entdiy.nat.server.handler;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.ControlMessageType;
 import com.entdiy.nat.common.constant.ProtocolType;
+import com.entdiy.nat.common.constant.ProxyMessageType;
 import com.entdiy.nat.common.handler.NatCommonHandler;
 import com.entdiy.nat.common.model.AuthMessage;
 import com.entdiy.nat.common.model.AuthRespMessage;
@@ -30,14 +31,15 @@ import com.entdiy.nat.common.model.RegProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.ServerContext;
+import com.entdiy.nat.server.codec.NatHttpResponseDecoder;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
 import com.entdiy.nat.server.support.NatClient;
 import com.entdiy.nat.server.support.ProxyChannelSource;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -46,7 +48,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,6 +69,8 @@ public class ServerControlHandler extends NatCommonHandler {
     private static Map<String, String> reqIdUrlMapping = new HashMap<>();
 
     private static Set<Integer> listeningRemotePorts = new HashSet<>();
+
+    private NatHttpResponseDecoder responseDecoder=new NatHttpResponseDecoder();
 
     public ServerControlHandler() {
 
@@ -126,6 +133,38 @@ public class ServerControlHandler extends NatCommonHandler {
                             respBody.setReqId(reqId);
                             respBody.setProtocol(bodyMessage.getProtocol());
                             respBody.setUrl(url);
+
+                            if (bodyMessage.getRemotePort() != null) {
+                                if (listeningRemotePorts.contains(bodyMessage.getRemotePort())) {
+                                    String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
+                                    log.warn(error + " for Tunnel: {}", bodyMessage);
+                                    respBody.setError(error);
+                                } else {
+                                    ServerBootstrap b = new ServerBootstrap();
+                                    b.group(bossGroup, workerGroup)
+                                            .channel(NioServerSocketChannel.class)
+                                            .option(ChannelOption.SO_BACKLOG, 100)
+                                            .childHandler(new ChannelInitializer<SocketChannel>() {
+                                                @Override
+                                                public void initChannel(SocketChannel ch) {
+                                                    ChannelPipeline p = ch.pipeline();
+                                                    p.addLast(new LoggingHandler());
+                                                    p.addLast(new IdleStateHandler(10, 20, 25));
+                                                    p.addLast(new NatMessageEncoder());
+                                                    if (ProtocolType.HTTP.name().equalsIgnoreCase(bodyMessage.getProtocol())) {
+                                                        p.addLast(new HttpRequestDecoder());
+                                                        p.addLast(new HttpObjectAggregator(2 * 1024 * 1024));
+                                                    }
+                                                    p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
+                                                }
+                                            });
+
+                                    ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
+                                    log.info("Listening remote channel: {}", f.channel());
+                                    listeningRemotePorts.add(bodyMessage.getRemotePort());
+                                }
+                            }
+
                             byte[] respBodyContent = JsonUtil.serialize(respBody).getBytes();
 
                             NatMessage respMessage = NatMessage.build();
@@ -134,33 +173,6 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
                             ctx.channel().writeAndFlush(respMessage);
-
-                            if (bodyMessage.getRemotePort() != null
-                                    && bodyMessage.getRemotePort() > -1
-                                    && !listeningRemotePorts.contains(bodyMessage.getRemotePort())) {
-                                ServerBootstrap b = new ServerBootstrap();
-                                b.group(bossGroup, workerGroup)
-                                        .channel(NioServerSocketChannel.class)
-                                        .option(ChannelOption.SO_BACKLOG, 100)
-                                        .childHandler(new ChannelInitializer<SocketChannel>() {
-                                            @Override
-                                            public void initChannel(SocketChannel ch) {
-                                                ChannelPipeline p = ch.pipeline();
-                                                p.addLast(new LoggingHandler());
-                                                p.addLast(new NatMessageEncoder());
-                                                p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
-                                            }
-                                        });
-
-                                ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
-                                log.info("Listening remote channel: {}", f.channel());
-                                listeningRemotePorts.add(bodyMessage.getRemotePort());
-                                f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
-                                    Channel closeRemoteChannel = t.channel();
-                                    log.info("Disconnect to remote channel: {}", closeRemoteChannel);
-                                });
-
-                            }
                             //TODO HTTP处理
                         } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
                             String body = messageIn.getBodyString();
@@ -178,18 +190,32 @@ public class ServerControlHandler extends NatCommonHandler {
                             log.debug("RegProxy client: {}", bodyMessage.getClientToken());
                             ProxyChannelSource.add(bodyMessage.getClientToken(), ctx.channel());
                         }
+                    } else if (messageIn.getProtocol() == ProtocolType.TCP.getCode()) {
+                        if (messageIn.getType() == ProxyMessageType.ProxyResp.getCode()) {
+                            Channel remoteChannel = RemotePortHandler.getRemoteChannel(ctx.channel());
+                            if (remoteChannel != null) {
+                                ByteBuf byteBuf = Unpooled.copiedBuffer(messageIn.getBody());
+                                log.debug("Write message to remote channel: {}, data length: {}", remoteChannel, byteBuf.readableBytes());
+                                remoteChannel.writeAndFlush(byteBuf);
+                            }
+                        }
+                    } else if (messageIn.getProtocol() == ProtocolType.HTTP.getCode()) {
+                        if (messageIn.getType() == ProxyMessageType.ProxyResp.getCode()) {
+                            Channel remoteChannel = RemotePortHandler.getRemoteChannel(ctx.channel());
+                            if (remoteChannel != null) {
+                                ByteBuf byteBuf = Unpooled.copiedBuffer(messageIn.getBody());
+//                                List<Object> out = Lists.newArrayList();
+//                                responseDecoder.decode(ctx,byteBuf,out);
+//                                //TODO 301 302等转换处理
+//                                HttpResponse httpResponse=(HttpResponse)out.get(0);
+//                                //httpResponse.headers()
+                                log.debug("Write message to remote channel: {}, data length: {}", remoteChannel, byteBuf.readableBytes());
+                                remoteChannel.writeAndFlush(byteBuf);
+                            }
+                        }
                     }
                 }
             } finally {
-                ReferenceCountUtil.release(msg);
-            }
-        } else {
-            Channel publicChannel = RemotePortHandler.getPublicChannel(ctx.channel());
-            if (publicChannel != null) {
-                ByteBuf byteBuf = (ByteBuf) msg;
-                log.debug("Write message to public channel: {}, data length: {}", publicChannel, byteBuf.readableBytes());
-                publicChannel.writeAndFlush(byteBuf);
-            } else {
                 ReferenceCountUtil.release(msg);
             }
         }
