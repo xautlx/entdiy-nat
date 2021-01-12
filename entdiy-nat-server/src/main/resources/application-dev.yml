@@ -1,7 +1,7 @@
 logging:
   level:
     com.entdiy: DEBUG
-    io.netty.handler.logging: DEBUG
+    io.netty.handler.logging: INFO
     root: INFO
   config: classpath:logback-spring-dev.xml
 nat:

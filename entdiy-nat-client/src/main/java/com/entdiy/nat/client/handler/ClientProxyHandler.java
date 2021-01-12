@@ -19,7 +19,6 @@ package com.entdiy.nat.client.handler;
 
 import com.entdiy.nat.client.ClientContext;
 import com.entdiy.nat.client.config.NatClientConfigProperties;
-import com.entdiy.nat.common.codec.NatHttpRequestEncoder;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.ControlMessageType;
@@ -58,10 +57,6 @@ public class ClientProxyHandler extends NatCommonHandler {
     private static NioEventLoopGroup group = new NioEventLoopGroup();
 
     private BiMap<Channel, Channel> targetProxyChannelMapping = HashBiMap.create();
-    private BiMap<String, Channel> urlChannelMapping = HashBiMap.create();
-
-    private NatHttpRequestEncoder requestEncoder = new NatHttpRequestEncoder();
-
 
     public ClientProxyHandler(String clientToken) {
         this.clientToken = clientToken;
