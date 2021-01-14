@@ -1,0 +1,11 @@
+###
+GET http://localhost:8088/tester/ping
+
+###
+GET http://localhost:8088/tester/location
+
+###
+GET http://localhost:18088/tester/ping
+
+###
+GET http://localhost:18088/tester/location

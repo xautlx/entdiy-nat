@@ -1,0 +1,6 @@
+server:
+  port: 8088
+  servlet:
+    context-path: /tester
+nat:
+  port: 8888
