@@ -33,6 +33,7 @@ import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.ServerContext;
 import com.entdiy.nat.server.codec.NatHttpResponseDecoder;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
+import com.entdiy.nat.server.service.ControlService;
 import com.entdiy.nat.server.support.NatClient;
 import com.entdiy.nat.server.support.ProxyChannelSource;
 import io.netty.bootstrap.ServerBootstrap;
@@ -70,7 +71,7 @@ public class ServerControlHandler extends NatCommonHandler {
 
     private static Set<Integer> listeningRemotePorts = new HashSet<>();
 
-    private NatHttpResponseDecoder responseDecoder=new NatHttpResponseDecoder();
+    private NatHttpResponseDecoder responseDecoder = new NatHttpResponseDecoder();
 
     public ServerControlHandler() {
 
@@ -85,6 +86,8 @@ public class ServerControlHandler extends NatCommonHandler {
 
         if (msg instanceof NatMessage) {
             try {
+                ControlService controlService = ServerContext.getControlService();
+
                 NatMessage messageIn = (NatMessage) msg;
                 //优先处理Ping消息，高频反复调用，只做少量日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Ping.getCode()) {
@@ -104,10 +107,13 @@ public class ServerControlHandler extends NatCommonHandler {
                             String reqBodyString = messageIn.getBodyString();
                             AuthMessage reqBody = JsonUtil.deserialize(reqBodyString, AuthMessage.class);
 
-                            log.debug("Processing Auth for: {}", reqBody.getClientId());
-                            String clientToken = ServerContext.getControlService().authClient(reqBody);
+                            log.debug("Processing auth for client: {}", reqBody.getClient());
+                            String clientToken = controlService.authClient(reqBody);
 
                             AuthRespMessage respBody = new AuthRespMessage();
+                            if (clientToken == null) {
+                                respBody.setError("Auth failure, please check secret");
+                            }
                             respBody.setClientToken(clientToken);
                             respBody.setVersion(config.getVersion());
                             respBody.setMmVersion(config.getMmVersion());
@@ -122,6 +128,8 @@ public class ServerControlHandler extends NatCommonHandler {
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
+                            String client = controlService.validateClientToken(bodyMessage.getClientToken());
+                            log.debug("ReqTunnel for client: {} with: {}", client, bodyMessage);
 
                             String url = bodyMessage.getRemotePort() > 0 ?
                                     (bodyMessage.getProtocol() + ":" + bodyMessage.getRemotePort()) :
@@ -155,7 +163,7 @@ public class ServerControlHandler extends NatCommonHandler {
                                                         p.addLast(new HttpRequestDecoder());
                                                         p.addLast(new HttpObjectAggregator(2 * 1024 * 1024));
                                                     }
-                                                    p.addLast(new RemotePortHandler(bodyMessage.getClientToken(), url));
+                                                    p.addLast(new RemotePortHandler(client, url));
                                                 }
                                             });
 
@@ -177,9 +185,11 @@ public class ServerControlHandler extends NatCommonHandler {
                         } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             InitProxyMessage bodyMessage = JsonUtil.deserialize(body, InitProxyMessage.class);
-                            log.debug("InitProxy for client: {}", bodyMessage);
+                            String client = controlService.validateClientToken(bodyMessage.getClientToken());
+
+                            log.debug("InitProxy for client: {} with: {}", client, bodyMessage);
                             NatClient natClient = new NatClient();
-                            natClient.setClientToken(bodyMessage.getClientToken());
+                            natClient.setClient(client);
                             natClient.setPoolCoreSize(bodyMessage.getCoreSize());
                             natClient.setPoolIdleSize(bodyMessage.getIdleSize());
                             natClient.setPoolMaxSize(bodyMessage.getMaxSize());
@@ -187,8 +197,10 @@ public class ServerControlHandler extends NatCommonHandler {
                         } else if (messageIn.getType() == ControlMessageType.RegProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             RegProxyMessage bodyMessage = JsonUtil.deserialize(body, RegProxyMessage.class);
-                            log.debug("RegProxy client: {}", bodyMessage.getClientToken());
-                            ProxyChannelSource.add(bodyMessage.getClientToken(), ctx.channel());
+                            String client = controlService.validateClientToken(bodyMessage.getClientToken());
+
+                            log.debug("RegProxy client: {}", client);
+                            ProxyChannelSource.add(client, ctx.channel());
                         }
                     } else if (messageIn.getProtocol() == ProtocolType.TCP.getCode()) {
                         if (messageIn.getType() == ProxyMessageType.ProxyResp.getCode()) {

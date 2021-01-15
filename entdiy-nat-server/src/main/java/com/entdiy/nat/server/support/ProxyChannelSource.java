@@ -41,7 +41,7 @@ public class ProxyChannelSource {
     public static Map<String, ProxyChannelPool> proxyChannelPoolMap = Maps.newConcurrentMap();
 
     public static void init(Channel controlChannel, NatClient natClient) {
-        proxyChannelPoolMap.put(natClient.getClientToken(), new ProxyChannelPool(controlChannel, natClient));
+        proxyChannelPoolMap.put(natClient.getClient(), new ProxyChannelPool(controlChannel, natClient));
     }
 
     public static void add(String key, Channel channel) {

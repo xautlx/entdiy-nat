@@ -18,19 +18,41 @@
 package com.entdiy.nat.server.service;
 
 import com.entdiy.nat.common.model.AuthMessage;
-import org.apache.tomcat.util.codec.binary.Base64;
+import com.entdiy.nat.server.ServerContext;
+import com.entdiy.nat.server.config.NatServerConfigProperties;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
+import java.util.UUID;
 
 public class SimpleControlService implements ControlService {
 
+    private static final BiMap<String, String> authDataMapping = HashBiMap.create();
 
     @Override
     public String authClient(AuthMessage authMessage) {
         //注意安全风险：忽略账号密码验证，直接返回可用clientId值
-        return Base64.encodeBase64String(authMessage.getClientId().getBytes());
+        String client = authMessage.getClient();
+        NatServerConfigProperties config = ServerContext.getConfig();
+        NatServerConfigProperties.Client theClient = config.getClients().get(client);
+        if (theClient == null
+                || !StringUtils.hasText(theClient.getSecret())
+                || !StringUtils.hasText(authMessage.getSecret())
+                || !theClient.getSecret().equals(authMessage.getSecret())) {
+            return null;
+        }
+        String clientToken = UUID.randomUUID().toString();
+        //最后登录会覆盖之前token，相当于后面客户端连接会自动把之前登录会话踢掉
+        authDataMapping.put(client, clientToken);
+        return clientToken;
     }
 
     @Override
     public String validateClientToken(String clientToken) {
-        return new String(Base64.decodeBase64(clientToken));
+        String client = authDataMapping.inverse().get(clientToken);
+        Assert.notNull(client, "Client token validate failure: " + clientToken);
+        return client;
     }
 }

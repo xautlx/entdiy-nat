@@ -22,7 +22,20 @@ import org.springframework.stereotype.Service;
 
 @Service
 public interface ControlService {
+    /**
+     * 基于客户端认证信息校验其合法性并分配认证Token
+     *
+     * @param authMessage
+     * @return
+     */
     String authClient(AuthMessage authMessage);
 
+    /**
+     * 根据传入Token校验并返回对应的client标识信息
+     * 校验失败抛出运行异常
+     *
+     * @param clientToken
+     * @return 返回token对应的client值
+     */
     String validateClientToken(String clientToken);
 }

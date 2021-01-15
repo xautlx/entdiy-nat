@@ -43,15 +43,15 @@ import java.util.List;
 public class RemotePortHandler extends NatCommonHandler {
 
 
-    private String clientToken;
+    private String client;
     private String url;
 
     private static BiMap<Channel, Channel> remoteChannelToProxyChannelMapping = HashBiMap.create();
 
     private NatHttpRequestEncoder requestEncoder = new NatHttpRequestEncoder();
 
-    public RemotePortHandler(String clientToken, String url) {
-        this.clientToken = clientToken;
+    public RemotePortHandler(String client, String url) {
+        this.client = client;
         this.url = url;
     }
 
@@ -60,7 +60,7 @@ public class RemotePortHandler extends NatCommonHandler {
         Channel remoteChannel = ctx.channel();
         String clientAddr = remoteChannel.remoteAddress().toString();
         log.debug("RemotePortHandler channelActive: {}", remoteChannel);
-        Channel proxyChannel = ProxyChannelSource.acquire(clientToken);
+        Channel proxyChannel = ProxyChannelSource.acquire(client);
         remoteChannelToProxyChannelMapping.put(remoteChannel, proxyChannel);
 
         StartProxyMessage respBody = new StartProxyMessage();

@@ -7,8 +7,8 @@ logging:
     root: INFO
   config: classpath:logback-spring-dev.xml
 nat:
-  clientId: ABC-EDF
-  clientSecret: 123456
+  client: client01
+  secret: client01P@ssword
 
   #serverAddr: entdiy.com
   #port: 5555

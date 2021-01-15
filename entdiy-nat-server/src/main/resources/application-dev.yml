@@ -5,7 +5,10 @@ logging:
     root: INFO
   config: classpath:logback-spring-dev.xml
 nat:
-  domain: 127.0.0.1
-  httpAddr: 80
-  httpsAddr: 443
+  domain: nat.test.com
+  httpAddr: 4440
   tunnelAddr: 4443
+  clients:
+    client01:
+      secret: client01P@ssword
+

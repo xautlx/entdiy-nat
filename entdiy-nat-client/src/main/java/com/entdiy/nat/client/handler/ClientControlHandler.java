@@ -81,8 +81,8 @@ public class ClientControlHandler extends NatCommonHandler {
         log.debug("ClientControlHandler channelActive: {}", ctx.channel());
         NatClientConfigProperties config = ClientContext.getConfig();
         AuthMessage bodyMessage = new AuthMessage();
-        bodyMessage.setClientId(config.getClientId());
-        bodyMessage.setClientSecret(config.getClientSecret());
+        bodyMessage.setClient(config.getClient());
+        bodyMessage.setSecret(config.getSecret());
         bodyMessage.setVersion(config.getVersion());
         bodyMessage.setMmVersion(config.getMmVersion());
         byte[] bodyContent = JsonUtil.serialize(bodyMessage).getBytes();

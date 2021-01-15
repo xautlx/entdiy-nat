@@ -26,8 +26,8 @@ public class AuthMessage {
     private String version;
     private String mmVersion;
 
-    private String clientId;
-    private String clientSecret;
+    private String client;
+    private String secret;
 
     private String os;
     private String arch;

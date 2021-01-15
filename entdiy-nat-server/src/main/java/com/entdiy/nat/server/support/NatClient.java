@@ -21,7 +21,7 @@ import lombok.Data;
 
 @Data
 public class NatClient {
-    private String clientToken;
+    private String client;
     private Integer poolCoreSize;
     private Integer poolIdleSize;
     private Integer poolMaxSize;

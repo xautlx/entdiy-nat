@@ -27,8 +27,8 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "nat")
 public class NatClientConfigProperties {
     private Boolean idlePingEnabled = Boolean.TRUE;
-    private String clientId;
-    private String clientSecret;
+    private String client;
+    private String secret;
     private String version;
     private String mmVersion;
 
