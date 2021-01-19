@@ -35,9 +35,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
@@ -81,6 +79,11 @@ public class NatClientListener {
                         p.addLast(new NatMessageDecoder());
                         p.addLast(new NatMessageEncoder());
                         p.addLast(new ClientControlHandler());
+
+                        NatClientConfigProperties config = ClientContext.getConfig();
+                        if (config.getSslEngine() != null) {
+                            p.addFirst("ssl", new SslHandler(config.getSslEngine()));
+                        }
                     }
                 });
     }
@@ -89,8 +92,6 @@ public class NatClientListener {
     public void run() {
         NatClientConfigProperties config = ClientContext.getConfig();
         try {
-            SslContext sslCtx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .build();
             if (connectTimes == 0) {
                 log.debug("Start connect to server {}:{}", config.getServerAddr(), config.getPort());
             } else {

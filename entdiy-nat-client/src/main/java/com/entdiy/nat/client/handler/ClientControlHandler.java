@@ -49,6 +49,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -237,6 +238,11 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));
+
+                                                NatClientConfigProperties config = ClientContext.getConfig();
+                                                if (config.getSslEngine() != null) {
+                                                    p.addFirst("ssl", new SslHandler(config.getSslEngine()));
+                                                }
                                             }
                                         });
                                 ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();

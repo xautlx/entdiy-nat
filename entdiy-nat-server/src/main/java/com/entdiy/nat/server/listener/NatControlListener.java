@@ -35,6 +35,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -60,6 +61,10 @@ public class NatControlListener extends NatCommonListener {
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new ServerControlHandler());
+
+                            if (config.getSslEngine() != null) {
+                                p.addFirst("ssl", new SslHandler(config.getSslEngine()));
+                            }
                         }
                     });
             log.debug("Start bind port: {}", config.getTunnelAddr());

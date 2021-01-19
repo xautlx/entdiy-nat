@@ -13,5 +13,7 @@ spring:
 logging:
   config: classpath:logback-spring-prd.xml
 nat:
+  sslAuth: false
+  keyStorePass: entdiy-nat
   version: 1.0.0
   mmVersion: S20201212
