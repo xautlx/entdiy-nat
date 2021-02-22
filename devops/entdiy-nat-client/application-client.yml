@@ -7,8 +7,9 @@ logging:
     io.netty.handler.logging: INFO
     root: INFO
 nat:
-  clientId: entdiy
-  clientSecret: entdiy123
+  # client不可重复，请根据实际信息覆盖设置
+  client: entdiy
+  secret: entdiy123
   # NAT Server端的公网IP地址或域名
   serverAddr: 127.0.0.1
   # NAT Server端穿透服务端口，对应于server端配置的nat.tunnelAddr
@@ -17,16 +18,18 @@ nat:
   # client = 客户端本地tunnels配置为准，忽略server端配置
   # server = server端定义为准，忽略本地tunnels配置
   tunnelsMode: client
-  tunnels:
-    ssh:
-      # 可根据实际情况修改为局域网内服务所在主机IP
-      host: 127.0.0.1
-      port: 22
-      # 服务端穿透访问入口端口
-      remotePort: 122
-    mysql:
-      # 可根据实际情况修改为局域网内服务所在主机IP
-      host: 127.0.0.1
-      port: 3306
-      # 服务端穿透访问入口端口
-      remotePort: 13306
+#    # 以下配置仅做示意，请根据实际情况修改相关参数
+#  tunnels:
+#    # 以下配置仅做示意，请根据实际情况修改相关参数
+#    ssh:
+#      # 可根据实际情况修改为局域网内服务所在主机IP
+#      host: 127.0.0.1
+#      port: 22
+#      # 服务端穿透访问入口端口
+#      remotePort: 122
+#    mysql:
+#      # 可根据实际情况修改为局域网内服务所在主机IP
+#      host: 127.0.0.1
+#      port: 3306
+#      # 服务端穿透访问入口端口
+#      remotePort: 13306

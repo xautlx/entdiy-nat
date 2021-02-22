@@ -16,3 +16,7 @@ nat:
   httpsAddr: 443
   # 供NAT客户端穿透访问的主服务端口，如果端口占用需要修改请注意保持server和client端同步修改
   tunnelAddr: 4443
+  # 请根据各个client不同标识对应设置client标识和秘钥
+  clients:
+    entdiy:
+      secret: entdiy123
