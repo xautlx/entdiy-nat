@@ -21,7 +21,7 @@
 	</appender>
 
     <appender name="HEARTBEAT_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_FILE}_heartbeat.log</file>
+        <file>${LOG_FILE}-heartbeat.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FILE}_heartbeat-%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
