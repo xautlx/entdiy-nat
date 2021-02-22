@@ -1,11 +1,12 @@
 server:
   port: 8086
 logging:
+  config: classpath:logback-spring-dev.xml
   level:
     com.entdiy: DEBUG
+    com.entdiy.nat.heartbeat: DEBUG
     io.netty.handler.logging: INFO
     root: INFO
-  config: classpath:logback-spring-dev.xml
 nat:
   client: client01
   secret: client01P@ssword

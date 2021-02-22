@@ -17,9 +17,6 @@
  */
 package com.entdiy.nat.server.listener;
 
-import com.entdiy.nat.common.codec.NatMessageDecoder;
-import com.entdiy.nat.common.codec.NatMessageEncoder;
-import com.entdiy.nat.common.constant.Constant;
 import com.entdiy.nat.common.listener.NatCommonListener;
 import com.entdiy.nat.server.ServerContext;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
@@ -33,16 +30,13 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.TimeUnit;
-
 @Slf4j
-public class NatControlListener extends NatCommonListener {
+public class NatHttpListener extends NatCommonListener {
 
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workGroup = new NioEventLoopGroup();
@@ -60,20 +54,14 @@ public class NatControlListener extends NatCommonListener {
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
                             p.addLast(new LoggingHandler());
-                            p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
-                            p.addLast(new NatMessageDecoder());
-                            p.addLast(new NatMessageEncoder());
-                            p.addLast(new IdleStateHandler(120, 0, 0, TimeUnit.SECONDS));
+                            p.addLast(new HttpRequestDecoder());
+                            p.addLast(new HttpObjectAggregator(2 * 1024 * 1024));
                             p.addLast(new ServerControlHandler());
-
-                            if (config.getSslEngine() != null) {
-                                p.addFirst("ssl", new SslHandler(config.getSslEngine()));
-                            }
                         }
                     });
-            log.debug("Start bind port: {}", config.getTunnelAddr());
-            ChannelFuture f = b.bind(config.getTunnelAddr()).sync();
-            log.info("Listening for control and proxy connections: {}", f.channel());
+            log.debug("Start bind port: {}", config.getHttpAddr());
+            ChannelFuture f = b.bind(config.getHttpAddr()).sync();
+            log.info("Listening for HTTP income connections: {}", f.channel());
         } catch (Exception e) {
             log.error("ServerBootstrap bind error", e);
         } finally {

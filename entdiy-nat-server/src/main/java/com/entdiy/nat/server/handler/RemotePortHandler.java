@@ -101,6 +101,7 @@ public class RemotePortHandler extends NatCommonHandler {
                 remoteChannel.close();
                 return;
             }
+
             NatMessage natMessage = NatMessage.build();
             natMessage.setType(ProxyMessageType.Proxy.getCode());
             if (msg instanceof FullHttpRequest) {
@@ -109,7 +110,7 @@ public class RemotePortHandler extends NatCommonHandler {
                 ByteBuf outByteBuf = (ByteBuf) out.get(0);
                 natMessage.setProtocol(ProtocolType.HTTP.getCode());
                 natMessage.setBody(ByteBufUtil.getBytes(outByteBuf));
-                log.debug("Write HTTP message to proxy channel: {}, data size: {}", proxyChannel, outByteBuf.readableBytes());
+                log.debug("Write HTTP/port message to proxy channel: {}, data size: {}", proxyChannel, outByteBuf.readableBytes());
                 proxyChannel.writeAndFlush(natMessage);
             } else if (msg instanceof ByteBuf) {
                 ByteBuf outByteBuf = (ByteBuf) msg;

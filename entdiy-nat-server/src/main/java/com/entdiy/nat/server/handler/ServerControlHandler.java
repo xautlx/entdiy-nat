@@ -52,9 +52,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,6 +67,8 @@ import java.util.Set;
 
 @Slf4j
 public class ServerControlHandler extends NatCommonHandler {
+
+    private static final Logger heartbeatLogger = LoggerFactory.getLogger("com.entdiy.nat.heartbeat");
 
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -77,6 +83,18 @@ public class ServerControlHandler extends NatCommonHandler {
 
     }
 
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object obj) {
+        if (obj instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) obj;
+            if (IdleState.READER_IDLE.equals(event.state())) {
+                log.debug("Disconnect lost client: {}", ctx);
+                ctx.disconnect();
+            }
+        }
+    }
+
     @Override
 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -89,14 +107,15 @@ public class ServerControlHandler extends NatCommonHandler {
                 ControlService controlService = ServerContext.getControlService();
 
                 NatMessage messageIn = (NatMessage) msg;
-                //优先处理Ping消息，高频反复调用，只做少量日志避免干扰主业务日志
+                //优先处理Ping消息，高频反复调用，单独日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Ping.getCode()) {
-                    log.trace("Read PING message: {}", messageIn);
+                    heartbeatLogger.debug("Read Ping message: {}", messageIn);
                     NatMessage respMessage = NatMessage.build();
                     byte[] respBodyContent = ControlMessageType.Pong.name().getBytes();
                     respMessage.setProtocol(messageIn.getProtocol());
                     respMessage.setType(ControlMessageType.Pong.getCode());
                     respMessage.setBody(respBodyContent);
+                    heartbeatLogger.debug("Write Pong message: {}", respMessage);
                     ctx.channel().writeAndFlush(respMessage);
 
                 } else {
@@ -181,7 +200,6 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
                             ctx.channel().writeAndFlush(respMessage);
-                            //TODO HTTP处理
                         } else if (messageIn.getType() == ControlMessageType.InitProxy.getCode()) {
                             String body = messageIn.getBodyString();
                             InitProxyMessage bodyMessage = JsonUtil.deserialize(body, InitProxyMessage.class);
