@@ -31,6 +31,7 @@ import com.entdiy.nat.common.model.AuthRespMessage;
 import com.entdiy.nat.common.model.InitProxyMessage;
 import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.NewTunnelMessage;
+import com.entdiy.nat.common.model.ReqPingMessage;
 import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.model.Tunnel;
@@ -55,6 +56,8 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -66,6 +69,8 @@ import java.util.UUID;
 
 @Slf4j
 public class ClientControlHandler extends NatCommonHandler {
+
+    private static final Logger heartbeatLogger = LoggerFactory.getLogger("com.entdiy.nat.heartbeat");
 
     private static Map<String, Tunnel> reqIdTunnelMapping = new HashMap<>();
     private static Map<String, Tunnel> urlTunnelMapping = new HashMap<>();
@@ -110,14 +115,21 @@ public class ClientControlHandler extends NatCommonHandler {
         }
         if (obj instanceof IdleStateEvent) {
             IdleStateEvent event = (IdleStateEvent) obj;
-            if (IdleState.ALL_IDLE.equals(event.state())) {
+            if (IdleState.WRITER_IDLE.equals(event.state())) {
+                ReqPingMessage bodyMessage = new ReqPingMessage();
+                bodyMessage.setClientToken(clientToken);
+                bodyMessage.setTimestamp(System.currentTimeMillis());
+                byte[] bodyContent = JsonUtil.serialize(bodyMessage).getBytes();
+
                 NatMessage message = NatMessage.build();
-                byte[] content = String.valueOf(System.currentTimeMillis()).getBytes();
                 message.setProtocol(ProtocolType.CONTROL.getCode());
-                message.setType(ControlMessageType.Ping.getCode());
-                message.setBody(content);
-                log.trace("Write message: {}", message);
+                message.setType(ControlMessageType.RegProxy.getCode());
+                message.setBody(bodyContent);
+
+                heartbeatLogger.debug("Write Ping message: {}", message);
                 ctx.channel().writeAndFlush(message);
+            } else if (IdleState.READER_IDLE.equals(event.state())) {
+                ctx.channel().close();
             }
         }
     }
@@ -135,8 +147,7 @@ public class ClientControlHandler extends NatCommonHandler {
                 NatMessage messageIn = (NatMessage) msg;
                 //优先处理Ping消息，高频反复调用，只做少量日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Pong.getCode()) {
-                    log.trace("Read message: {}", messageIn);
-
+                    heartbeatLogger.debug("Read Pong message: {}", messageIn);
                 } else {
                     log.debug("Read message: {}", messageIn);
                     if (messageIn.getProtocol() == ProtocolType.CONTROL.getCode()) {
