@@ -72,15 +72,15 @@ public class NatClientListener {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
-                        //    p.addLast(sslCtx.newHandler(ch.alloc()));
                         p.addLast(new LoggingHandler());
-                        p.addLast(new IdleStateHandler(60, 80, 120));
+                        p.addLast(new IdleStateHandler(70, 30, 0));
                         p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
                         p.addLast(new NatMessageDecoder());
                         p.addLast(new NatMessageEncoder());
                         p.addLast(new ClientControlHandler());
 
                         NatClientConfigProperties config = ClientContext.getConfig();
+                        //SSL开启性能损耗较大，暂时默认关闭
                         if (config.getSslEngine() != null) {
                             p.addFirst("ssl", new SslHandler(config.getSslEngine()));
                         }
