@@ -17,6 +17,7 @@
  */
 package com.entdiy.nat.common.util;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -24,6 +25,9 @@ import java.util.Map;
 
 public class JsonUtil {
     private static ObjectMapper objectMapper = new ObjectMapper();
+    static {
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    }
 
     public static String serialize(Object value) {
         try {
