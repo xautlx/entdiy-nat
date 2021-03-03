@@ -123,10 +123,10 @@ public class ClientControlHandler extends NatCommonHandler {
 
                 NatMessage message = NatMessage.build();
                 message.setProtocol(ProtocolType.CONTROL.getCode());
-                message.setType(ControlMessageType.RegProxy.getCode());
+                message.setType(ControlMessageType.Ping.getCode());
                 message.setBody(bodyContent);
 
-                heartbeatLogger.debug("Write Ping message: {}", message);
+                heartbeatLogger.info("Write Ping message: {}", message);
                 ctx.channel().writeAndFlush(message);
             } else if (IdleState.READER_IDLE.equals(event.state())) {
                 ctx.channel().close();
@@ -147,7 +147,7 @@ public class ClientControlHandler extends NatCommonHandler {
                 NatMessage messageIn = (NatMessage) msg;
                 //优先处理Ping消息，高频反复调用，只做少量日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Pong.getCode()) {
-                    heartbeatLogger.debug("Read Pong message: {}", messageIn);
+                    heartbeatLogger.info("Read Pong message: {}", messageIn);
                 } else {
                     log.debug("Read message: {}", messageIn);
                     if (messageIn.getProtocol() == ProtocolType.CONTROL.getCode()) {
