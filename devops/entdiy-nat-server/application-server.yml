@@ -1,22 +1,31 @@
 server:
   # Web管理端口，默认0表示随机端口(可通过启动日志查看运行端口)，亦可设定为当前机器空闲固定网络端口
+  # 暂无意义，后期提供Web管理功能后可指定端口便于访问控制
   port: 0
 logging:
   level:
-    com.entdiy: INFO
+    # 业务默认INFO级别提供常规日志输出，遇到问题可相关修改为DEBUG
+    com.entdiy: DEBUG
+    # 心跳日志单独输出至logs目录下-heartbeat.log后缀日志文件，便于直观了解心跳健康情况
+    com.entdiy.nat.heartbeat: DEBUG
+    # Netty日志级别控制，DEBUG级别会输出详细的IN/OUT数据包信息
     io.netty.handler.logging: INFO
     root: INFO
 nat:
-  domain: 127.0.0.1
+  # 暂未实现
+  #domain: 127.0.0.1
   # 提供HTTP穿透的服务端端口
   # 如果默认80端口已经被Nginx等占用，可修改为其他端口，然后在Nginx配置proxy_pass反向代理httpAddr端口服务
   httpAddr: 80
   # 提供HTTPS穿透的服务端端口
   # 如果默认443端口已经被Nginx等占用，可修改为其他端口，然后在Nginx配置proxy_pass反向代理httpsAddr端口服务
-  httpsAddr: 443
+  # 暂未实现
+  #httpsAddr: 443
   # 供NAT客户端穿透访问的主服务端口，如果端口占用需要修改请注意保持server和client端同步修改
   tunnelAddr: 4443
   # 请根据各个client不同标识对应设置client标识和秘钥
   clients:
     entdiy:
+      secret: entdiy123
+    entdiy-ssh:
       secret: entdiy123

@@ -1,9 +1,14 @@
 server:
   # Web管理端口，默认0表示随机端口(可通过启动日志查看运行端口)，亦可设定为当前机器空闲固定网络端口
+  # 暂无意义，后期提供Web管理功能后可指定端口便于访问控制
   port: 0
 logging:
   level:
+    # 业务默认INFO级别提供常规日志输出，遇到问题可相关修改为DEBUG
     com.entdiy: INFO
+    # 心跳日志单独输出至logs目录下-heartbeat.log后缀日志文件，便于直观了解心跳健康情况
+    com.entdiy.nat.heartbeat: INFO
+    # Netty日志级别控制，DEBUG级别会输出详细的IN/OUT数据包信息
     io.netty.handler.logging: INFO
     root: INFO
 nat:
@@ -20,16 +25,15 @@ nat:
   tunnelsMode: client
 #    # 以下配置仅做示意，请根据实际情况修改相关参数
 #  tunnels:
-#    # 以下配置仅做示意，请根据实际情况修改相关参数
 #    ssh:
 #      # 可根据实际情况修改为局域网内服务所在主机IP
 #      host: 127.0.0.1
 #      port: 22
-#      # 服务端穿透访问入口端口
+#      # 服务端穿透访问入口端口，需要确保server端全局唯一
 #      remotePort: 122
 #    mysql:
 #      # 可根据实际情况修改为局域网内服务所在主机IP
 #      host: 127.0.0.1
 #      port: 3306
-#      # 服务端穿透访问入口端口
+#      # 服务端穿透访问入口端口，需要确保server端全局唯一
 #      remotePort: 13306
