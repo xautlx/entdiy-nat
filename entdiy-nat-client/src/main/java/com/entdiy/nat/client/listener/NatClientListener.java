@@ -20,6 +20,7 @@ package com.entdiy.nat.client.listener;
 import com.entdiy.nat.client.ClientContext;
 import com.entdiy.nat.client.config.NatClientConfigProperties;
 import com.entdiy.nat.client.handler.ClientControlHandler;
+import com.entdiy.nat.client.handler.ClientProxyHandler;
 import com.entdiy.nat.common.codec.NatMessageDecoder;
 import com.entdiy.nat.common.codec.NatMessageEncoder;
 import com.entdiy.nat.common.constant.Constant;
@@ -72,18 +73,19 @@ public class NatClientListener {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
+
+                        NatClientConfigProperties config = ClientContext.getConfig();
+                        //SSL开启性能损耗较大，暂时默认关闭
+                        if (config.getSslEngine() != null) {
+                            p.addLast(new SslHandler(config.getSslEngine()));
+                        }
+
                         p.addLast(new LoggingHandler());
                         p.addLast(new IdleStateHandler(70, 30, 0));
                         p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
                         p.addLast(new NatMessageDecoder());
                         p.addLast(new NatMessageEncoder());
                         p.addLast(new ClientControlHandler());
-
-                        NatClientConfigProperties config = ClientContext.getConfig();
-                        //SSL开启性能损耗较大，暂时默认关闭
-                        if (config.getSslEngine() != null) {
-                            p.addFirst("ssl", new SslHandler(config.getSslEngine()));
-                        }
                     }
                 });
     }
@@ -110,6 +112,8 @@ public class NatClientListener {
             });
             f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
                 log.warn("Disconnect to server {}:{}", config.getServerAddr(), config.getPort());
+                //主连接断开后，清理释放关联连接
+                ClientProxyHandler.clearTargetProxyChannels();
                 scheduleReconnect();
             });
         } catch (Exception e) {

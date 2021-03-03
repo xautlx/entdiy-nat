@@ -1,6 +1,10 @@
 ## 项目简介
 
-类似 [Ngrok](https://github.com/inconshreveable/ngrok) ，基于Netty实现的NAT内网穿透访问软件。
+类似 [Ngrok](https://github.com/inconshreveable/ngrok) 和 [FRP](https://github.com/fatedier/frp) ，基于Netty实现的NAT内网穿透访问软件。
+
+![nat-deploy-access](./images/nat-deploy-access.jpg)
+
+整个项目设计实现思路借鉴 [Ngrok](https://github.com/inconshreveable/ngrok) ，其实现原理和过程可参考其官方资料和网上资料。
 
 **entdiy-nat-common** - 公共组件类代码模块
 
@@ -57,14 +61,14 @@ ssh -p 122 root@127.0.0.1
 * **连接池处理** - Server端与Client端的Proxy Channel采用简化连接池实现，提升穿透连接的初始化连接速度和效率
 * **Client重连机制** - 由于网络异常或Server端重启，需要Client重连机制来实现连接中断后自动重连Server
 * **Client/Secret&Token安全认证机制** - 基于client和secret及token机制实现基础的访问认证支持
+* **SSL证书支持** - 引入SSL证书支持，提升穿透访问数据安全性（处理性能损耗较大，默认关闭，待优化）
 
 ## 路线计划
 
 待实现功能列表：
 
-* **HTTPS协议穿透** - 个人想法建议采用Nginx层面反向代理NAT层面的HTTP服务，待验证
+* **HTTPS协议穿透** - （暂不考虑）建议采用Nginx层面HTTPS反向代理NAT层面的HTTP服务
 * **Server端Tunnel定义控制** - 典型的内网穿透都是由Client定义隧道，但是对于一些业务场景需要由Server进行全局的各Client端的隧道定义实现灵活的Server端管控支持
-* **SSL证书支持** - 引入SSL证书支持，提升穿透访问数据安全性
 
 ## 项目故事
 

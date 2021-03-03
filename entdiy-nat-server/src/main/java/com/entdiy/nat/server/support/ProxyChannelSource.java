@@ -23,7 +23,6 @@ import com.entdiy.nat.common.model.NatMessage;
 import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.handler.RemotePortHandler;
-import com.google.common.collect.Maps;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.pool.ChannelHealthChecker;
@@ -33,12 +32,13 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class ProxyChannelSource {
     // key为目标host，value为目标host的连接池
-    public static Map<String, ProxyChannelPool> proxyChannelPoolMap = Maps.newConcurrentMap();
+    public static Map<String, ProxyChannelPool> proxyChannelPoolMap = new ConcurrentHashMap<>();
 
     public static void init(Channel controlChannel, NatClient natClient) {
         proxyChannelPoolMap.put(natClient.getClient(), new ProxyChannelPool(controlChannel, natClient));
@@ -105,18 +105,25 @@ public class ProxyChannelSource {
         public Channel acquire() {
             int size = natClient.getPoolCoreSize();
             Channel validChannel = null;
+            int tryTimes = 0;
             while (validChannel == null) {
                 Channel channel = deque.pollLast();
                 if (channel == null) {
+                    if (tryTimes >= 5) {
+                        log.warn("Failure to acquire channel after {} times retry.", tryTimes);
+                        return null;
+                    }
                     try {
+                        tryTimes++;
                         batchReqProxy(1);
-                        Thread.sleep(100);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         log.error("thread error", e);
                     }
                 } else if (healthCheck.isHealthy(channel).getNow()) {
                     validChannel = channel;
                 }
+
             }
 
             if (deque.size() < size

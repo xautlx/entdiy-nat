@@ -25,9 +25,6 @@ import com.entdiy.nat.common.model.StartProxyMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.codec.NatHttpRequestEncoder;
 import com.entdiy.nat.server.support.ProxyChannelSource;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -36,7 +33,10 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @Slf4j
@@ -46,7 +46,7 @@ public class RemotePortHandler extends NatCommonHandler {
     private String client;
     private String url;
 
-    private static BiMap<Channel, Channel> remoteChannelToProxyChannelMapping = HashBiMap.create();
+    private static Map<Channel, Channel> remoteChannelToProxyChannelMapping = new HashMap<>();
 
     private NatHttpRequestEncoder requestEncoder = new NatHttpRequestEncoder();
 
@@ -61,6 +61,10 @@ public class RemotePortHandler extends NatCommonHandler {
         String clientAddr = remoteChannel.remoteAddress().toString();
         log.debug("RemotePortHandler channelActive: {}", remoteChannel);
         Channel proxyChannel = ProxyChannelSource.acquire(client);
+        if (proxyChannel == null) {
+            ctx.channel().close();
+            return;
+        }
         remoteChannelToProxyChannelMapping.put(remoteChannel, proxyChannel);
 
         StartProxyMessage respBody = new StartProxyMessage();
@@ -105,7 +109,7 @@ public class RemotePortHandler extends NatCommonHandler {
             NatMessage natMessage = NatMessage.build();
             natMessage.setType(ProxyMessageType.Proxy.getCode());
             if (msg instanceof FullHttpRequest) {
-                List<Object> out = Lists.newArrayList();
+                List<Object> out = new ArrayList<>();
                 requestEncoder.encode(ctx, msg, out);
                 ByteBuf outByteBuf = (ByteBuf) out.get(0);
                 natMessage.setProtocol(ProtocolType.HTTP.getCode());
@@ -125,7 +129,8 @@ public class RemotePortHandler extends NatCommonHandler {
     }
 
     public static Channel getRemoteChannel(Channel proxyChannel) {
-        return remoteChannelToProxyChannelMapping.inverse().get(proxyChannel);
+        return remoteChannelToProxyChannelMapping.entrySet()
+                .stream().filter(one -> one.getValue().equals(proxyChannel)).findFirst().get().getKey();
     }
 
     public static Channel removeChannelMapping(Channel proxyChannel) {

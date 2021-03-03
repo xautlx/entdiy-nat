@@ -36,7 +36,6 @@ import com.entdiy.nat.common.model.ReqProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
-import com.google.common.collect.Lists;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -62,6 +61,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import javax.net.ssl.SSLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,7 +163,7 @@ public class ClientControlHandler extends NatCommonHandler {
                             log.debug("Get Auth ClientToken: {}", reqBody.getClientToken());
                             clientToken = reqBody.getClientToken();
 
-                            List<Tunnel> tunnels = Lists.newArrayList();
+                            List<Tunnel> tunnels = new ArrayList<>();
                             Map<String, Tunnel> configTunnels = config.getTunnels();
                             if (TunnelsModeEnum.server.equals(config.getTunnelsMode())) {
                                 configTunnels = reqBody.getTunnels();

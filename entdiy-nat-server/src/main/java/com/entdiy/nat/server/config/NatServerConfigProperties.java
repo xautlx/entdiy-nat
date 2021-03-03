@@ -19,7 +19,6 @@ package com.entdiy.nat.server.config;
 
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.SslUtil;
-import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -29,6 +28,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +46,7 @@ public class NatServerConfigProperties {
     private String version;
     private String mmVersion;
 
-    private Map<String, Client> clients= Maps.newHashMap();
+    private Map<String, Client> clients = new HashMap<>();
 
     private SSLEngine sslEngine;
 
@@ -57,7 +57,7 @@ public class NatServerConfigProperties {
     }
 
     @PostConstruct
-    public void init(){
+    public void init() {
         if (!Boolean.FALSE.equals(getSslAuth())) {
             try {
                 SSLContext sslContext = SSLContext.getInstance("SSLv3");
@@ -66,7 +66,7 @@ public class NatServerConfigProperties {
                 if (keyManagers != null && trustManagers != null) {
                     sslContext.init(keyManagers, trustManagers, null);
                     sslContext.createSSLEngine().getSupportedCipherSuites();
-                    sslEngine= sslContext.createSSLEngine();
+                    sslEngine = sslContext.createSSLEngine();
                     sslEngine.setUseClientMode(false); //设置为服务端模式
                     sslEngine.setNeedClientAuth(true); //需要验证客户端
                     log.info("Running at SSL server mode");

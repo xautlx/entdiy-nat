@@ -30,8 +30,6 @@ import com.entdiy.nat.common.model.RegProxyMessage;
 import com.entdiy.nat.common.model.StartProxyMessage;
 import com.entdiy.nat.common.model.Tunnel;
 import com.entdiy.nat.common.util.JsonUtil;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -50,16 +48,28 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Slf4j
 public class ClientProxyHandler extends NatCommonHandler {
 
     private String clientToken;
     private static NioEventLoopGroup group = new NioEventLoopGroup();
 
-    private BiMap<Channel, Channel> targetProxyChannelMapping = HashBiMap.create();
+    private static Map<Channel, Channel> targetProxyChannelMapping = new HashMap<>();
 
     public ClientProxyHandler(String clientToken) {
         this.clientToken = clientToken;
+    }
+
+    public static void clearTargetProxyChannels() {
+        targetProxyChannelMapping.entrySet().forEach(
+                one -> {
+                    one.getKey().close();
+                    one.getValue().close();
+                }
+        );
     }
 
     @Override
@@ -137,7 +147,8 @@ public class ClientProxyHandler extends NatCommonHandler {
                                 targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
                                     Channel closeTargetChannel = t.channel();
                                     log.info("Disconnect to target channel: {}", closeTargetChannel);
-                                    Channel closeProxyChannel = targetProxyChannelMapping.inverse().get(closeTargetChannel);
+                                    Channel closeProxyChannel = targetProxyChannelMapping.entrySet()
+                                            .stream().filter(one -> one.getValue().equals(closeTargetChannel)).findFirst().get().getKey();
                                     targetProxyChannelMapping.remove(closeProxyChannel);
                                     log.info("Close proxy channel: {}", closeProxyChannel);
                                     closeProxyChannel.close();
