@@ -129,13 +129,19 @@ public class RemotePortHandler extends NatCommonHandler {
     }
 
     public static Channel getRemoteChannel(Channel proxyChannel) {
-        return remoteChannelToProxyChannelMapping.entrySet()
-                .stream().filter(one -> one.getValue().equals(proxyChannel)).findFirst().get().getKey();
+        for (Map.Entry<Channel, Channel> me : remoteChannelToProxyChannelMapping.entrySet()) {
+            if (me.getValue().equals(proxyChannel)) {
+                return me.getKey();
+            }
+        }
+        return null;
     }
 
     public static Channel removeChannelMapping(Channel proxyChannel) {
         Channel remoteChannel = getRemoteChannel(proxyChannel);
-        remoteChannelToProxyChannelMapping.remove(remoteChannel);
+        if (remoteChannel != null) {
+            remoteChannelToProxyChannelMapping.remove(remoteChannel);
+        }
         return remoteChannel;
     }
 }

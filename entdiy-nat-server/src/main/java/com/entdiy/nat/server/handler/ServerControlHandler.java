@@ -60,10 +60,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class ServerControlHandler extends NatCommonHandler {
@@ -73,7 +76,7 @@ public class ServerControlHandler extends NatCommonHandler {
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    private static Map<String, String> reqIdUrlMapping = new HashMap<>();
+    private static Map<Channel, List<Channel>> clientChannelFutureMapping = new ConcurrentHashMap<>();
 
     private static Set<Integer> listeningRemotePorts = new HashSet<>();
 
@@ -96,6 +99,26 @@ public class ServerControlHandler extends NatCommonHandler {
     }
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        clientChannelFutureMapping.put(channel, new ArrayList<>());
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        log.debug("Server inactive channel: {}", channel);
+        for (Channel remoteListenChannel : clientChannelFutureMapping.get(channel)) {
+            log.trace(" - Closing  remoteListenChannel: {}", remoteListenChannel);
+            listeningRemotePorts.remove(((InetSocketAddress) remoteListenChannel.localAddress()).getPort());
+            remoteListenChannel.close().sync();
+        }
+        clientChannelFutureMapping.remove(channel);
+        super.channelInactive(ctx);
+    }
+
+    @Override
 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg == null) {
@@ -109,13 +132,13 @@ public class ServerControlHandler extends NatCommonHandler {
                 NatMessage messageIn = (NatMessage) msg;
                 //优先处理Ping消息，高频反复调用，单独日志避免干扰主业务日志
                 if (messageIn.getType() == ControlMessageType.Ping.getCode()) {
-                    heartbeatLogger.debug("Read Ping message: {}", messageIn);
+                    heartbeatLogger.info("Read Ping message: {}", messageIn);
                     NatMessage respMessage = NatMessage.build();
                     byte[] respBodyContent = ControlMessageType.Pong.name().getBytes();
                     respMessage.setProtocol(messageIn.getProtocol());
                     respMessage.setType(ControlMessageType.Pong.getCode());
                     respMessage.setBody(respBodyContent);
-                    heartbeatLogger.debug("Write Pong message: {}", respMessage);
+                    heartbeatLogger.info("Write Pong message: {}", respMessage);
                     ctx.channel().writeAndFlush(respMessage);
 
                 } else {
@@ -154,7 +177,6 @@ public class ServerControlHandler extends NatCommonHandler {
                                     (bodyMessage.getProtocol() + ":" + bodyMessage.getRemotePort()) :
                                     (bodyMessage.getProtocol() + ":" + bodyMessage.getSubdomain());
                             String reqId = bodyMessage.getReqId();
-                            reqIdUrlMapping.put(reqId, url);
 
                             NewTunnelMessage respBody = new NewTunnelMessage();
                             respBody.setReqId(reqId);
@@ -187,8 +209,10 @@ public class ServerControlHandler extends NatCommonHandler {
                                             });
 
                                     ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
-                                    log.info("Listening remote channel: {}", f.channel());
+                                    Channel remoteListenChannel = f.channel();
+                                    log.info("Listening remote channel: {}", remoteListenChannel);
                                     listeningRemotePorts.add(bodyMessage.getRemotePort());
+                                    clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
                                 }
                             }
 

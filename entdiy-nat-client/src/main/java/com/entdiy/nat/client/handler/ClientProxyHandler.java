@@ -64,9 +64,12 @@ public class ClientProxyHandler extends NatCommonHandler {
     }
 
     public static void clearTargetProxyChannels() {
+        log.debug("Releasing connection after lost server connect");
         targetProxyChannelMapping.entrySet().forEach(
                 one -> {
+                    log.trace(" - target connection: {}", one.getKey());
                     one.getKey().close();
+                    log.trace(" - proxy connection: {}", one.getValue());
                     one.getValue().close();
                 }
         );
@@ -147,11 +150,15 @@ public class ClientProxyHandler extends NatCommonHandler {
                                 targetChannel.closeFuture().addListener((ChannelFutureListener) t -> {
                                     Channel closeTargetChannel = t.channel();
                                     log.info("Disconnect to target channel: {}", closeTargetChannel);
-                                    Channel closeProxyChannel = targetProxyChannelMapping.entrySet()
-                                            .stream().filter(one -> one.getValue().equals(closeTargetChannel)).findFirst().get().getKey();
-                                    targetProxyChannelMapping.remove(closeProxyChannel);
-                                    log.info("Close proxy channel: {}", closeProxyChannel);
-                                    closeProxyChannel.close();
+                                    for (Map.Entry<Channel, Channel> me : targetProxyChannelMapping.entrySet()) {
+                                        if (me.getValue().equals(closeTargetChannel)) {
+                                            Channel closeProxyChannel = me.getKey();
+                                            targetProxyChannelMapping.remove(closeProxyChannel);
+                                            log.info("Close proxy channel: {}", closeProxyChannel);
+                                            closeProxyChannel.close();
+                                            break;
+                                        }
+                                    }
                                 });
                             } else {
                                 proxyChannel.close();

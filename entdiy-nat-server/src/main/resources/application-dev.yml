@@ -9,6 +9,6 @@ nat:
   httpAddr: 4440
   tunnelAddr: 4443
   clients:
-    client01:
-      secret: client01P@ssword
+    entdiy:
+      secret: entdiy123
 

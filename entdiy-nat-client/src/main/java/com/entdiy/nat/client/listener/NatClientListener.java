@@ -103,15 +103,15 @@ public class NatClientListener {
             ChannelFuture f = b.connect(config.getServerAddr(), config.getPort()).sync();
             f.addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()) {
-                    log.info("Success connect to server {}:{}", config.getServerAddr(), config.getPort());
+                    log.info("Success connect to server {}", future.channel());
                     connectTimes = 0;
                 } else {
-                    log.warn("Fail connect to server {}:{}", config.getServerAddr(), config.getPort());
+                    log.warn("Fail connect to server {}", future.channel());
                     scheduleReconnect();
                 }
             });
-            f.channel().closeFuture().addListener((ChannelFutureListener) t -> {
-                log.warn("Disconnect to server {}:{}", config.getServerAddr(), config.getPort());
+            f.channel().closeFuture().addListener((ChannelFutureListener) future -> {
+                log.warn("Disconnect to server {}", future.channel());
                 //主连接断开后，清理释放关联连接
                 ClientProxyHandler.clearTargetProxyChannels();
                 scheduleReconnect();

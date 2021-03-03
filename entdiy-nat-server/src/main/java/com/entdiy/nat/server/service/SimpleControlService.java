@@ -21,7 +21,6 @@ import com.entdiy.nat.common.model.AuthMessage;
 import com.entdiy.nat.server.ServerContext;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
@@ -53,10 +52,13 @@ public class SimpleControlService implements ControlService {
 
     @Override
     public String validateClientToken(String clientToken) {
-        String client = authDataMapping.entrySet()
-                .stream().filter(one -> one.getValue().equals(clientToken)).findFirst().get().getKey();
-        Assert.notNull(client, "Client token validate failure: " + clientToken);
-        log.debug("Validate success token for client: {} for token: {}", client, clientToken);
-        return client;
+        for (Map.Entry<String, String> me : authDataMapping.entrySet()) {
+            if (me.getValue().equals(clientToken)) {
+                String client = me.getKey();
+                log.debug("Validate success token for client: {} for token: {}", client, clientToken);
+                return client;
+            }
+        }
+        throw new IllegalArgumentException("Client token validate failure: " + clientToken);
     }
 }
