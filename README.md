@@ -26,31 +26,7 @@
 
 特别提示：以下相关命令基于Mac或Linux等环境，Windows系统请参考相关脚本自行转换命令执行。
 
-* 获取整个项目，并进入项目主目录
-
-* 运行构建：
-~~~shell script
-mvn install
-~~~
-
-* 查阅 devops/entdiy-nat-server/application-server.yml 中相关配置参数，可按照注释含义按需调整。
-如果要体验实际效果可把entdiy-nat-server目录整体复制到公网服务器，简单体验也可以在当前机器直接运行。
-启动运行Server端：
-~~~shell script
-./devops/entdiy-nat-server/nat-server-cli.sh restart
-~~~
-
-* 查阅 devops/entdiy-nat-client/application-client.yml 中相关配置参数，
-默认穿透访问当前主机的22端口SSH服务和3306MySQL服务，可按照注释含义按需调整。
-启动运行Client端：
-~~~shell script
-./devops/entdiy-nat-client/nat-client-cli.sh restart
-~~~
-
-* TCP协议穿透访问测试，以 122 端口SSH访问穿透内容主机或者用工具以 13306 端口访问MySQL：
-~~~shell script
-ssh -p 122 root@127.0.0.1
-~~~
+详情请访问：[基于Netty的开源NAT内网穿透软件使用指南](./devops/README.md)
 
 ## 功能列表
 
@@ -67,7 +43,8 @@ ssh -p 122 root@127.0.0.1
 
 待实现功能列表：
 
-* **HTTPS协议穿透** - （暂不考虑）建议采用Nginx层面HTTPS反向代理NAT层面的HTTP服务
+* **HTTPS协议穿透** - （暂不考虑）建议采用在服务端Nginx层面HTTPS反向代理NAT层面的HTTP服务
+* **HTTP子域名访问支持** - （暂不考虑）支持采用和TCP相似的远端端口访问穿透服务，建议采用服务端Nginx层面反向代理不同子域名到不同端口HTTP服务
 * **Server端Tunnel定义控制** - 典型的内网穿透都是由Client定义隧道，但是对于一些业务场景需要由Server进行全局的各Client端的隧道定义实现灵活的Server端管控支持
 
 ## 项目故事
@@ -110,7 +87,7 @@ ssh -p 122 root@127.0.0.1
 客户端唯一做的事情就是实现内网穿透通讯数据转发，不做任何业务处理，程序稳定无需频繁更新，
 同时直接沿用原先已成型局域网设备接入程序，无需客户端或服务端新增定制接入开发。
 
-### 为啥重复造轮子呢？
+### 为啥重复造轮子
 
 既然上面已经有类似这样的内网穿透的成熟软件，为啥又重复造个轮子呢？原因如下：
 
