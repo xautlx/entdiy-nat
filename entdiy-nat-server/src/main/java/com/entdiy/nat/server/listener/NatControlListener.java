@@ -60,7 +60,7 @@ public class NatControlListener extends NatCommonListener {
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
                             p.addLast(new LoggingHandler());
-                            p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
+                            p.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, Constant.DELIMITER));
                             p.addLast(new NatMessageDecoder());
                             p.addLast(new NatMessageEncoder());
                             p.addLast(new IdleStateHandler(120, 0, 0, TimeUnit.SECONDS));

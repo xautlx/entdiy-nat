@@ -3,16 +3,14 @@ server:
 logging:
   config: classpath:logback-spring-dev.xml
   level:
-    com.entdiy: DEBUG
-    com.entdiy.nat.heartbeat: DEBUG
+    com.entdiy: INFO
+    com.entdiy.nat.heartbeat: INFO
     io.netty.handler.logging: INFO
     root: INFO
 nat:
-  client: client01
-  secret: client01P@ssword
-
-  #serverAddr: entdiy.com
-  #port: 5555
+  client: entdiy
+  secret: entdiy123
+  # 服务端地址可以是公网IP或域名
   serverAddr: 127.0.0.1
   port: 4443
   # 穿透通道定义模式：
@@ -20,28 +18,38 @@ nat:
   # server = server端定义为准，忽略本地tunnels配置
   tunnelsMode: "client"
   tunnels:
-    ssh-test:
-      host: 127.0.0.1
-      port: 22
-      remotePort: 122
-    hik-test:
-      host: 25.30.14.64
-      port: 8000
-      remotePort: 18000
-    mysql:
-      host: 127.0.0.1
-      port: 3306
-      remotePort: 13306
-    redis:
-      host: 127.0.0.1
-      port: 6379
-      remotePort: 16379
-    tester-tcp:
-      host: 127.0.0.1
-      port: 8888
-      remotePort: 18888
-    tester-http:
+#    ssh-test:
+#      host: 127.0.0.1
+#      port: 22
+#      remotePort: 122
+#    hik-test:
+#      host: 25.30.14.64
+#      port: 8000
+#      remotePort: 18000
+#    mysql:
+#      host: 127.0.0.1
+#      port: 3306
+#      remotePort: 13306
+#    redis:
+#      host: 127.0.0.1
+#      port: 6379
+#      remotePort: 16379
+#    tester-tcp:
+#      host: 127.0.0.1
+#      port: 8888
+#      remotePort: 18888
+#    tester-http:
+#      proto: http
+#      host: 127.0.0.1
+#      port: 8088
+#      remotePort: 18088
+    http1:
       proto: http
-      host: 127.0.0.1
-      port: 8088
-      remotePort: 18088
+      host: 10.137.43.252
+      port: 80
+      remotePort: 180
+    http2:
+      proto: http
+      host: 10.137.43.251
+      port: 8080
+      remotePort: 18080

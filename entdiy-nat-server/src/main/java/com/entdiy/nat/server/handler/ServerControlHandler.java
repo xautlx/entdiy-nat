@@ -110,7 +110,7 @@ public class ServerControlHandler extends NatCommonHandler {
         Channel channel = ctx.channel();
         log.debug("Server inactive channel: {}", channel);
         for (Channel remoteListenChannel : clientChannelFutureMapping.get(channel)) {
-            log.trace(" - Closing  remoteListenChannel: {}", remoteListenChannel);
+            log.trace(" - Closing remoteListenChannel: {}", remoteListenChannel);
             listeningRemotePorts.remove(((InetSocketAddress) remoteListenChannel.localAddress()).getPort());
             remoteListenChannel.close().sync();
         }
