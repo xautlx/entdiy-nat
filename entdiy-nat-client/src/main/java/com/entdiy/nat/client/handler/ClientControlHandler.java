@@ -245,7 +245,7 @@ public class ClientControlHandler extends NatCommonHandler {
                                                 ChannelPipeline p = ch.pipeline();
                                                 p.addLast(new LoggingHandler());
                                                 p.addLast(new IdleStateHandler(20, 30, 40));
-                                                p.addLast(new DelimiterBasedFrameDecoder(10240, Constant.DELIMITER));
+                                                p.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, Constant.DELIMITER));
                                                 p.addLast(new NatMessageDecoder());
                                                 p.addLast(new NatMessageEncoder());
                                                 p.addLast(new ClientProxyHandler(clientToken));
