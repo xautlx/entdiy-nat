@@ -154,11 +154,11 @@ nat:
 
 ~~~shell script
 
-2021-03-02 23:51:27.673  INFO 30050 - [pGroup-2-1]    c.e.n.c.l.NatClientListener[104] Success connect to server 47.96.65.93:5555
+2021-03-02 23:51:27.673  INFO 30050 - [pGroup-2-1]    c.e.n.c.l.NatClientListener[104] Success connect to server 127.0.0.1:5555
 2021-03-02 23:51:27.849  INFO 30050 - [      main] o.s.s.c.ThreadPoolTaskExecutor[181] Initializing ExecutorService 'applicationTaskExecutor'
 2021-03-02 23:51:27.854  INFO 30050 - [pGroup-2-1] c.e.n.c.h.ClientControlHandler[156] Application version (client)1.1.0/(server)1.0.0
-2021-03-02 23:51:27.916  INFO 30050 - [pGroup-2-1] c.e.n.c.h.ClientControlHandler[226] Forwarding TCP://47.96.65.93:13306 -> 127.0.0.1:3306
-2021-03-02 23:51:27.917  INFO 30050 - [pGroup-2-1] c.e.n.c.h.ClientControlHandler[226] Forwarding TCP://47.96.65.93:16379 -> 127.0.0.1:6379
+2021-03-02 23:51:27.916  INFO 30050 - [pGroup-2-1] c.e.n.c.h.ClientControlHandler[226] Forwarding TCP://127.0.0.1:13306 -> 127.0.0.1:3306
+2021-03-02 23:51:27.917  INFO 30050 - [pGroup-2-1] c.e.n.c.h.ClientControlHandler[226] Forwarding TCP://127.0.0.1:16379 -> 127.0.0.1:6379
 
 ~~~
 
