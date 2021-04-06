@@ -61,11 +61,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -76,9 +72,9 @@ public class ServerControlHandler extends NatCommonHandler {
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    private static Map<Channel, List<Channel>> clientChannelFutureMapping = new ConcurrentHashMap<>();
+    private static Map<Channel, Channel> clientChannelFutureMapping = new ConcurrentHashMap<>();
 
-    private static Set<Integer> listeningRemotePorts = new HashSet<>();
+    private static Map<Integer, String> listeningRemotePortMapping = new ConcurrentHashMap<>();
 
     private NatHttpResponseDecoder responseDecoder = new NatHttpResponseDecoder();
 
@@ -101,20 +97,22 @@ public class ServerControlHandler extends NatCommonHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
-        clientChannelFutureMapping.put(channel, new ArrayList<>());
+        log.info("Server active channel: {}", channel);
         super.channelActive(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
-        log.debug("Server inactive channel: {}", channel);
-        for (Channel remoteListenChannel : clientChannelFutureMapping.get(channel)) {
-            log.trace(" - Closing remoteListenChannel: {}", remoteListenChannel);
-            listeningRemotePorts.remove(((InetSocketAddress) remoteListenChannel.localAddress()).getPort());
+        log.info("Server inactive channel: {}", channel);
+        Channel remoteListenChannel = clientChannelFutureMapping.get(channel);
+        if (remoteListenChannel != null) {
+            log.debug(" - Closing remoteListenChannel: {}", remoteListenChannel);
+            Integer port = Integer.valueOf(((InetSocketAddress) remoteListenChannel.localAddress()).getPort());
+            listeningRemotePortMapping.remove(port);
             remoteListenChannel.close().sync();
+            clientChannelFutureMapping.remove(channel);
         }
-        clientChannelFutureMapping.remove(channel);
         super.channelInactive(ctx);
     }
 
@@ -184,9 +182,10 @@ public class ServerControlHandler extends NatCommonHandler {
                             respBody.setUrl(url);
 
                             if (bodyMessage.getRemotePort() != null) {
-                                if (listeningRemotePorts.contains(bodyMessage.getRemotePort())) {
+                                if (listeningRemotePortMapping.keySet().contains(bodyMessage.getRemotePort())) {
                                     String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
-                                    log.warn(error + " for Tunnel: {}", bodyMessage);
+                                    log.warn(error + " for Tunnel: {}, Has bind to client: {}", bodyMessage,
+                                            listeningRemotePortMapping.get(bodyMessage.getRemotePort()));
                                     respBody.setError(error);
                                 } else {
                                     ServerBootstrap b = new ServerBootstrap();
@@ -211,8 +210,8 @@ public class ServerControlHandler extends NatCommonHandler {
                                     ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
                                     Channel remoteListenChannel = f.channel();
                                     log.info("Listening remote channel: {}", remoteListenChannel);
-                                    listeningRemotePorts.add(bodyMessage.getRemotePort());
-                                    clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
+                                    listeningRemotePortMapping.put(bodyMessage.getRemotePort(), client);
+                                    clientChannelFutureMapping.put(ctx.channel(), remoteListenChannel);
                                 }
                             }
 

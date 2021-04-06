@@ -36,7 +36,7 @@ case "$1" in
         fi
         sleep 1s
         echo Waiting ${count} seconds/${WAIT_SECONDS} ...
-        if [ $count -gt $WAIT_SECONDS ];then
+        if [ $count -ge $WAIT_SECONDS ];then
           kill -9 $PID
         fi
         PID_EXIST=$(ps aux | awk '{print $2}'| grep -w $PID)

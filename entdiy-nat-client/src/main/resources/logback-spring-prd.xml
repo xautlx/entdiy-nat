@@ -11,7 +11,7 @@
         <file>${LOG_FILE}.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_FILE}-%d{yyyy-MM}.log</fileNamePattern>
+            <fileNamePattern>${LOG_FILE}-%d{yyyy-MM}.%i.log</fileNamePattern>
             <maxFileSize>100MB</maxFileSize>
             <maxHistory>6</maxHistory>
         </rollingPolicy>
@@ -24,7 +24,7 @@
         <file>${LOG_FILE}-heartbeat.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_FILE}-heartbeat-%d{yyyy-MM}.log</fileNamePattern>
+            <fileNamePattern>${LOG_FILE}-heartbeat-%d{yyyy-MM}.%i.log</fileNamePattern>
             <maxFileSize>100MB</maxFileSize>
             <maxHistory>6</maxHistory>
         </rollingPolicy>
