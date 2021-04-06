@@ -38,6 +38,15 @@ public class TargetHttpHandler extends NatCommonHandler {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        Channel targetChannel = ctx.channel();
+        log.info("Disconnect to target channel: {}", targetChannel);
+        ClientProxyHandler.removeChannelMapping(targetChannel);
+        proxyChannel.close();
+        targetChannel.close();
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         try {
             ByteBuf byteBuf = (ByteBuf) msg;

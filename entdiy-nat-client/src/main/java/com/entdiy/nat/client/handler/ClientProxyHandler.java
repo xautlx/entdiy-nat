@@ -184,4 +184,21 @@ public class ClientProxyHandler extends NatCommonHandler {
             ReferenceCountUtil.release(msg);
         }
     }
+
+    public static Channel getProxyChannel(Channel targetChannel) {
+        for (Map.Entry<Channel, Channel> me : targetProxyChannelMapping.entrySet()) {
+            if (me.getValue().equals(targetChannel)) {
+                return me.getKey();
+            }
+        }
+        return null;
+    }
+
+    public static Channel removeChannelMapping(Channel targetChannel) {
+        Channel proxyChannel = getProxyChannel(targetChannel);
+        if (proxyChannel != null) {
+            targetProxyChannelMapping.remove(proxyChannel);
+        }
+        return proxyChannel;
+    }
 }

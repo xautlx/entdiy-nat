@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class ProxyChannelSource {
-    // key为目标host，value为目标host的连接池
+    // key为目标client，value为目标host的连接池
     public static Map<String, ProxyChannelPool> proxyChannelPoolMap = new ConcurrentHashMap<>();
 
     public static void init(Channel controlChannel, NatClient natClient) {
@@ -59,7 +59,6 @@ public class ProxyChannelSource {
         private NatClient natClient;
         private volatile LocalDateTime lastBatchReqProxyTime = null;
         private volatile AtomicInteger acquiringCount = new AtomicInteger();
-        private volatile AtomicInteger count = new AtomicInteger();
         private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
 
         public ProxyChannelPool(Channel controlChannel, NatClient natClient) {
@@ -70,7 +69,6 @@ public class ProxyChannelSource {
 
         private void batchReqProxy(int newCount) {
             lastBatchReqProxyTime = LocalDateTime.now();
-            log.debug("BatchReqProxy times: {}", count.incrementAndGet());
             for (int i = 0; i < newCount; i++) {
                 acquireNew();
             }
@@ -78,11 +76,12 @@ public class ProxyChannelSource {
         }
 
         private void acquireNew() {
+            int count = acquiringCount.getAndIncrement();
             NatMessage reqProxyMessage = NatMessage.build();
             reqProxyMessage.setType(ControlMessageType.ReqProxy.getCode());
             reqProxyMessage.setProtocol(ProtocolType.CONTROL.getCode());
             reqProxyMessage.setBody(JsonUtil.serialize(new ReqProxyMessage()).getBytes());
-            log.debug("Writing message: {}", reqProxyMessage);
+            log.debug("Writing No.{} message: {}", count, reqProxyMessage);
             controlChannel.write(reqProxyMessage);
         }
 
@@ -126,6 +125,9 @@ public class ProxyChannelSource {
 
             }
 
+            /**
+             * 控制间隔一定时间才发起批量请求，避免瞬间大量请求客户端无法处理
+             */
             if (deque.size() < size
                     && (lastBatchReqProxyTime == null || lastBatchReqProxyTime.plusMinutes(1).isBefore(LocalDateTime.now()))) {
                 batchReqProxy(size);

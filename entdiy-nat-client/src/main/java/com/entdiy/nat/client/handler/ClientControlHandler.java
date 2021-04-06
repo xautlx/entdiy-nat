@@ -105,6 +105,7 @@ public class ClientControlHandler extends NatCommonHandler {
     public void channelInactive(ChannelHandlerContext ctx) {
         Channel controlChannel = ctx.channel();
         log.debug("ClientControlHandler channelInactive: {}", controlChannel);
+        controlChannel.close();
     }
 
     @Override

@@ -85,9 +85,12 @@ public class RemotePortHandler extends NatCommonHandler {
         log.debug("RemotePortHandler channelInactive: {}", remoteChannel);
         Channel proxyChannel = remoteChannelToProxyChannelMapping.get(remoteChannel);
         if (proxyChannel != null) {
+            remoteChannelToProxyChannelMapping.remove(remoteChannel);
             log.debug("Closing proxy channel: {}", proxyChannel);
             proxyChannel.close();
         }
+        remoteChannel.close();
+
     }
 
 
