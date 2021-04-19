@@ -61,6 +61,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -72,7 +74,10 @@ public class ServerControlHandler extends NatCommonHandler {
     private static final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private static final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    private static Map<Channel, Channel> clientChannelFutureMapping = new ConcurrentHashMap<>();
+    /**
+     * key: client control channel, value: server remote channels
+     */
+    private static Map<Channel, List<Channel>> clientChannelFutureMapping = new ConcurrentHashMap<>();
 
     private static Map<Integer, String> listeningRemotePortMapping = new ConcurrentHashMap<>();
 
@@ -105,12 +110,16 @@ public class ServerControlHandler extends NatCommonHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
         log.info("Server inactive channel: {}", channel);
-        Channel remoteListenChannel = clientChannelFutureMapping.get(channel);
-        if (remoteListenChannel != null) {
-            log.debug(" - Closing remoteListenChannel: {}", remoteListenChannel);
-            Integer port = Integer.valueOf(((InetSocketAddress) remoteListenChannel.localAddress()).getPort());
-            listeningRemotePortMapping.remove(port);
-            remoteListenChannel.close().sync();
+        List<Channel> remoteChannels = clientChannelFutureMapping.get(channel);
+        if (remoteChannels != null) {
+            if (remoteChannels.size() > 0) {
+                for (Channel remoteChannel : remoteChannels) {
+                    log.debug(" - Closing remoteListenChannel: {}", remoteChannel);
+                    Integer port = Integer.valueOf(((InetSocketAddress) remoteChannel.localAddress()).getPort());
+                    listeningRemotePortMapping.remove(port);
+                    remoteChannel.close().sync();
+                }
+            }
             clientChannelFutureMapping.remove(channel);
         }
         super.channelInactive(ctx);
@@ -147,7 +156,8 @@ public class ServerControlHandler extends NatCommonHandler {
                             String reqBodyString = messageIn.getBodyString();
                             AuthMessage reqBody = JsonUtil.deserialize(reqBodyString, AuthMessage.class);
 
-                            log.debug("Processing auth for client: {}", reqBody.getClient());
+                            String client = reqBody.getClient();
+                            log.debug("Processing auth for client: {}", client);
                             String clientToken = controlService.authClient(reqBody);
 
                             AuthRespMessage respBody = new AuthRespMessage();
@@ -164,7 +174,10 @@ public class ServerControlHandler extends NatCommonHandler {
                             respMessage.setProtocol(ProtocolType.CONTROL.getCode());
                             respMessage.setBody(respBodyContent);
                             log.debug("Writing message : {}", respMessage);
-                            ctx.channel().writeAndFlush(respMessage);
+                            Channel channel = ctx.channel();
+                            channel.writeAndFlush(respMessage);
+
+                            clientChannelFutureMapping.put(channel, new ArrayList<>());
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
@@ -211,7 +224,7 @@ public class ServerControlHandler extends NatCommonHandler {
                                     Channel remoteListenChannel = f.channel();
                                     log.info("Listening remote channel: {}", remoteListenChannel);
                                     listeningRemotePortMapping.put(bodyMessage.getRemotePort(), client);
-                                    clientChannelFutureMapping.put(ctx.channel(), remoteListenChannel);
+                                    clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
                                 }
                             }
 

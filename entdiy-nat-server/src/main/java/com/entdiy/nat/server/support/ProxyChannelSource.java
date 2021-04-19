@@ -92,13 +92,8 @@ public class ProxyChannelSource {
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
                 log.info("Disconnect to proxy channel: {}", closeProxyChannel);
-                Channel remoteChannel = RemotePortHandler.removeChannelMapping(closeProxyChannel);
-                if (remoteChannel != null) {
-                    log.info("Closing remote channel: {}", remoteChannel);
-                    remoteChannel.close();
-                }
+                RemotePortHandler.removeChannelMapping(closeProxyChannel);
             });
-
         }
 
         public Channel acquire() {
