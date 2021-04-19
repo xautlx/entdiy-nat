@@ -91,7 +91,7 @@ public class ProxyChannelSource {
             log.debug("Proxy channels pool free after add: {}", deque.size());
             channel.closeFuture().addListener((ChannelFutureListener) t -> {
                 Channel closeProxyChannel = t.channel();
-                log.info("Disconnect to proxy channel: {}", closeProxyChannel);
+                log.debug("Disconnect to proxy channel: {}", closeProxyChannel);
                 RemotePortHandler.removeChannelMapping(closeProxyChannel);
             });
         }

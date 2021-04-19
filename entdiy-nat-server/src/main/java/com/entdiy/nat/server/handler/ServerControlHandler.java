@@ -102,19 +102,19 @@ public class ServerControlHandler extends NatCommonHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
-        log.info("Server active channel: {}", channel);
+        log.debug("Server active channel: {}", channel);
         super.channelActive(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
-        log.info("Server inactive channel: {}", channel);
+        log.debug("Server inactive channel: {}", channel);
         List<Channel> remoteChannels = clientChannelFutureMapping.get(channel);
         if (remoteChannels != null) {
             if (remoteChannels.size() > 0) {
                 for (Channel remoteChannel : remoteChannels) {
-                    log.debug(" - Closing remoteListenChannel: {}", remoteChannel);
+                    log.info(" - Closing remote channel: {}", remoteChannel);
                     Integer port = Integer.valueOf(((InetSocketAddress) remoteChannel.localAddress()).getPort());
                     listeningRemotePortMapping.remove(port);
                     remoteChannel.close().sync();

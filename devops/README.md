@@ -184,4 +184,4 @@ client端默认间隔30秒发起server重连请求，通过client和server两端
 
 ## 最后
 
-本文主要对软件使用做一个简单介绍，后期会逐步补充相关设计说明文档。如果使用或开发过程遇到问题，欢迎 [提交Issue](https://github.com/xautlx/entdiy-nat/issues)
+本文主要对软件使用做一个简单介绍，如果使用或开发过程遇到问题，欢迎 [提交Issue](https://github.com/xautlx/entdiy-nat/issues)
