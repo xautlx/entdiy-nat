@@ -13,6 +13,9 @@
     <logger name="com.entdiy" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
+    <logger name="com.entdiy.nat.heartbeat" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
     <logger name="io.netty.handler.logging" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>

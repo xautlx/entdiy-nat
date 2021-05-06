@@ -13,8 +13,8 @@ logging:
     root: INFO
 nat:
   # client不可重复，请根据实际信息覆盖设置
-  client: entdiy
-  secret: entdiy123
+  client: test
+  secret: test123
   # NAT Server端的公网IP地址或域名
   serverAddr: 127.0.0.1
   # NAT Server端穿透服务端口，对应于server端配置的nat.tunnelAddr

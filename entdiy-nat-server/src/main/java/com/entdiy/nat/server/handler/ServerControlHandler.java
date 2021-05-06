@@ -195,12 +195,8 @@ public class ServerControlHandler extends NatCommonHandler {
                             respBody.setUrl(url);
 
                             if (bodyMessage.getRemotePort() != null) {
-                                if (listeningRemotePortMapping.keySet().contains(bodyMessage.getRemotePort())) {
-                                    String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
-                                    log.warn(error + " for Tunnel: {}, Has bind to client: {}", bodyMessage,
-                                            listeningRemotePortMapping.get(bodyMessage.getRemotePort()));
-                                    respBody.setError(error);
-                                } else {
+                                String existClient = listeningRemotePortMapping.get(bodyMessage.getRemotePort());
+                                if (existClient == null) {
                                     ServerBootstrap b = new ServerBootstrap();
                                     b.group(bossGroup, workerGroup)
                                             .channel(NioServerSocketChannel.class)
@@ -222,9 +218,17 @@ public class ServerControlHandler extends NatCommonHandler {
 
                                     ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
                                     Channel remoteListenChannel = f.channel();
-                                    log.info("Listening remote channel: {}", remoteListenChannel);
+                                    log.info("Listening remote channel: {} for client: {}", remoteListenChannel, client);
                                     listeningRemotePortMapping.put(bodyMessage.getRemotePort(), client);
                                     clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
+                                } else {
+                                    if (!existClient.equals(client)) {
+                                        String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
+                                        log.warn(error + " for Tunnel: {}, Has bind to client: {}", bodyMessage, existClient);
+                                        respBody.setError(error);
+                                    } else {
+                                        log.debug("Just rebind remote port to client: {}", bodyMessage.getRemotePort(), existClient);
+                                    }
                                 }
                             }
 

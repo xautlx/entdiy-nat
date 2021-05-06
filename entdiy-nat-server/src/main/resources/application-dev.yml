@@ -1,6 +1,6 @@
 logging:
   level:
-    com.entdiy: DEBUG
+    com.entdiy: INFO
     io.netty.handler.logging: INFO
     root: INFO
   config: classpath:logback-spring-dev.xml
@@ -11,4 +11,6 @@ nat:
   clients:
     entdiy:
       secret: entdiy123
+    test:
+      secret: test123
 
