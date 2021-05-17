@@ -23,14 +23,14 @@ import com.entdiy.nat.server.config.NatServerConfigProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class SimpleControlService implements ControlService {
 
-    private static final Map<String, String> authDataMapping = new HashMap<>();
+    private static final Map<String, String> authDataMapping = new ConcurrentHashMap<>();
 
     @Override
     public String authClient(AuthMessage authMessage) {
