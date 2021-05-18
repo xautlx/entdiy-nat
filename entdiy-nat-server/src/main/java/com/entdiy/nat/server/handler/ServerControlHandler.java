@@ -222,7 +222,7 @@ public class ServerControlHandler extends NatCommonHandler {
 
                                     ChannelFuture f = b.bind(bodyMessage.getRemotePort()).sync();
                                     Channel remoteListenChannel = f.channel();
-                                    log.info("Listening remote channel: {}", remoteListenChannel);
+                                    log.info("Listening remote channel: {} for client: {}", remoteListenChannel, client);
                                     listeningRemotePortMapping.put(bodyMessage.getRemotePort(), client);
                                     clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
                                 }

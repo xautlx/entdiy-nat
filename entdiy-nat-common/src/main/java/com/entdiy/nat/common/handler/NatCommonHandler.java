@@ -22,6 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+
 
 @Slf4j
 public abstract class NatCommonHandler extends ChannelInboundHandlerAdapter {
@@ -29,7 +31,11 @@ public abstract class NatCommonHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Channel channel = ctx.channel();
-        log.warn("Channel {} exception: {}", channel, this.getClass(), cause);
+        if(cause instanceof IOException) {
+            log.debug("Channel {} exception: {}", channel, this.getClass(), cause);
+        }else{
+            log.warn("Channel {} exception: {}", channel, this.getClass(), cause);
+        }
         channel.close();
     }
 

@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,17 @@ public class RemotePortHandler extends NatCommonHandler {
     public RemotePortHandler(String client, String url) {
         this.client = client;
         this.url = url;
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        Channel channel = ctx.channel();
+        if(cause instanceof IOException) {
+            log.debug("Remote Channel {}, client: {}, url: {}", channel, client, url, cause);
+        }else{
+            log.warn("Remote Channel {}, client: {}, url: {}", channel, client, url, cause);
+        }
+        //异常不关闭连接，以便持续接收外部请求
     }
 
     @Override
