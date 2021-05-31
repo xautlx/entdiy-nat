@@ -31,7 +31,6 @@ import com.entdiy.nat.common.model.RegProxyMessage;
 import com.entdiy.nat.common.model.ReqTunnelMessage;
 import com.entdiy.nat.common.util.JsonUtil;
 import com.entdiy.nat.server.ServerContext;
-import com.entdiy.nat.server.codec.NatHttpResponseDecoder;
 import com.entdiy.nat.server.config.NatServerConfigProperties;
 import com.entdiy.nat.server.service.ControlService;
 import com.entdiy.nat.server.support.NatClient;
@@ -60,7 +59,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,15 +75,9 @@ public class ServerControlHandler extends NatCommonHandler {
     /**
      * key: client control channel, value: server remote channels
      */
-    private static Map<Channel, List<Channel>> clientChannelFutureMapping = new ConcurrentHashMap<>();
+    private static Map<String, List<Channel>> clientChannelFutureMapping = new ConcurrentHashMap<>();
 
     private static Map<Integer, String> listeningRemotePortMapping = new ConcurrentHashMap<>();
-
-    private NatHttpResponseDecoder responseDecoder = new NatHttpResponseDecoder();
-
-    public ServerControlHandler() {
-
-    }
 
 
     @Override
@@ -110,18 +102,6 @@ public class ServerControlHandler extends NatCommonHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
         log.debug("Server inactive channel: {}", channel);
-        List<Channel> remoteChannels = clientChannelFutureMapping.get(channel);
-        if (remoteChannels != null) {
-            if (remoteChannels.size() > 0) {
-                for (Channel remoteChannel : remoteChannels) {
-                    log.info(" - Closing remote channel: {}", remoteChannel);
-                    Integer port = Integer.valueOf(((InetSocketAddress) remoteChannel.localAddress()).getPort());
-                    listeningRemotePortMapping.remove(port);
-                    remoteChannel.close().sync();
-                }
-            }
-            clientChannelFutureMapping.remove(channel);
-        }
         super.channelInactive(ctx);
     }
 
@@ -177,7 +157,7 @@ public class ServerControlHandler extends NatCommonHandler {
                             Channel channel = ctx.channel();
                             channel.writeAndFlush(respMessage);
 
-                            clientChannelFutureMapping.put(channel, new ArrayList<>());
+                            clientChannelFutureMapping.put(client, new ArrayList<>());
                         } else if (messageIn.getType() == ControlMessageType.ReqTunnel.getCode()) {
                             String body = messageIn.getBodyString();
                             ReqTunnelMessage bodyMessage = JsonUtil.deserialize(body, ReqTunnelMessage.class);
@@ -195,11 +175,16 @@ public class ServerControlHandler extends NatCommonHandler {
                             respBody.setUrl(url);
 
                             if (bodyMessage.getRemotePort() != null) {
-                                if (listeningRemotePortMapping.keySet().contains(bodyMessage.getRemotePort())) {
-                                    String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
-                                    log.warn(error + " for Tunnel: {}, Has bind to client: {}", bodyMessage,
-                                            listeningRemotePortMapping.get(bodyMessage.getRemotePort()));
-                                    respBody.setError(error);
+                                String mappingClient = listeningRemotePortMapping.get(bodyMessage.getRemotePort());
+                                if (mappingClient != null) {
+                                    if (!mappingClient.equals(client)) {
+                                        String error = "RemotePort '" + bodyMessage.getRemotePort() + "' NOT available for server bind";
+                                        log.warn(error + " for Tunnel: {}, Has bind to client: {}", bodyMessage,
+                                                listeningRemotePortMapping.get(bodyMessage.getRemotePort()));
+                                        respBody.setError(error);
+                                    } else {
+                                        log.debug("Rebind remote port: {} to client: {}", bodyMessage.getRemotePort(), client);
+                                    }
                                 } else {
                                     ServerBootstrap b = new ServerBootstrap();
                                     b.group(bossGroup, workerGroup)
@@ -224,7 +209,7 @@ public class ServerControlHandler extends NatCommonHandler {
                                     Channel remoteListenChannel = f.channel();
                                     log.info("Listening remote channel: {} for client: {}", remoteListenChannel, client);
                                     listeningRemotePortMapping.put(bodyMessage.getRemotePort(), client);
-                                    clientChannelFutureMapping.get(ctx.channel()).add(remoteListenChannel);
+                                    clientChannelFutureMapping.get(client).add(remoteListenChannel);
                                 }
                             }
 
