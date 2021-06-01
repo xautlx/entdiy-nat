@@ -2,7 +2,7 @@
 
 Expose a server running on your local machine to the internet, like Ngrok, based on Netty.
 
-由于国内站点一些限制原因，项目完整介绍请移步到GitHub项目页面: [https://github.com/xautlx/entdiy-nat/README_MORE.md](https://github.com/xautlx/entdiy-nat/README_MORE.md)
+由于国内站点一些限制原因，项目完整介绍请移步到GitHub项目页面: [https://github.com/xautlx/entdiy-nat](https://github.com/xautlx/entdiy-nat/blob/master/README_MORE.md)
 
 ### 项目托管同步更新GIT资源库：
 
